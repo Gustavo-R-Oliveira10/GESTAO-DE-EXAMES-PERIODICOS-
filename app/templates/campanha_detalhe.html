@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}{{ campanha.local_trabalho }} — Campanha — Controle de Periódicos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{{ campanha.local_trabalho }}</h1>
+  <p>{{ campanha.data_inicio | data_br }} — {{ campanha.data_fim | data_br }} ·
+    {% if campanha.kits_enviados %}<span class="badge badge-success">Kits enviados</span>{% else %}<span class="badge badge-muted">Kits pendentes</span>{% endif %}
+    {% if campanha.detalhe_operacao %} · <span class="text-muted">{{ campanha.detalhe_operacao }}</span>{% endif %}
+  </p>
+</div>
+
+<div class="stats-row">
+  <div class="stat-tile"><div class="stat-value">{{ campanha.total_membros }}</div><div class="stat-label">Convocados (ASO vencido)</div></div>
+  <div class="stat-tile"><div class="stat-value" style="color:var(--success)">{{ campanha.concluidos }}</div><div class="stat-label">Concluídos</div></div>
+  <div class="stat-tile"><div class="stat-value" style="color:var(--warning)">{{ campanha.total_membros - campanha.concluidos }}</div><div class="stat-label">Ainda pendentes</div></div>
+</div>
+
+<div class="card">
+  <div class="progress-meta">
+    <strong>Progresso da campanha</strong><span>{{ campanha.percentual_concluido }}%</span>
+  </div>
+  <div class="progress-track lg">
+    <div class="progress-fill" style="width:{{ campanha.percentual_concluido }}%"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>1. Lista do RH do local de trabalho</h2>
+
+  {% if not campanha.lista_rh_travada %}
+  <p class="card-subtitle">
+    A planilha que o RH de {{ campanha.local_trabalho }} te manda com quem precisa fazer o exame.
+    Cruza contra a base mestre e barra automaticamente quem já está "Dispensado" (ASO em dia) —
+    só quem está com o ASO vencido entra como "Convocado" e conta pra meta da campanha. Quem não
+    bateu vai para a fila de exceções. <strong>Esse envio só pode ser feito uma vez por campanha.</strong>
+  </p>
+  <form method="post" action="{{ url_for('campanha_importar_rh', campanha_id=campanha.id) }}" enctype="multipart/form-data">
+    <div class="field">
+      <label for="arquivo_rh">Planilha do RH (.xlsx)</label>
+      <div class="file-drop">
+        Matricula e/ou CPF e/ou Nome
+        <br><input type="file" id="arquivo_rh" name="arquivo" accept=".xlsx,.xls" required>
+      </div>
+    </div>
+    <button class="btn btn-secondary" type="submit"
+      onclick="return confirm('A lista do RH só pode ser enviada uma vez para esta campanha. Confirmar o envio?')">
+      Importar lista do RH
+    </button>
+  </form>
+
+  {% else %}
+  <div class="alert alert-success">
+    Lista do RH processada em {{ campanha.lista_rh_processada_em | datahora_br }}
+    (arquivo: <strong>{{ campanha.lista_rh_arquivo }}</strong>) — não pode ser reenviada para esta campanha.
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-tile"><div class="stat-value">{{ convocados|length }}</div><div class="stat-label">Convocados (ASO vencido)</div></div>
+    <div class="stat-tile"><div class="stat-value" style="color:var(--success)">{{ ja_dispensados|length }}</div><div class="stat-label">Já dispensados (barrados da meta)</div></div>
+  </div>
+
+  <h2>Convocados</h2>
+  <p class="card-subtitle">Estavam com o ASO vencido no momento do cruzamento — contam pra meta da campanha.</p>
+  {% if convocados %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Nome</th></tr></thead>
+      <tbody>
+        {% for c in convocados %}<tr><td>{{ c.funcionario_id }}</td><td>{{ c.nome }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">Nenhum convocado — todo mundo da lista já estava com o ASO em dia.</div>
+  {% endif %}
+
+  <h2 style="margin-top:22px">Já Dispensados</h2>
+  <p class="card-subtitle">A lista do RH trouxe, mas o sistema barrou por já estarem com o ASO em dia — não contam pra meta.</p>
+  {% if ja_dispensados %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Nome</th></tr></thead>
+      <tbody>
+        {% for c in ja_dispensados %}<tr><td>{{ c.funcionario_id }}</td><td>{{ c.nome }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">Ninguém foi barrado — todo mundo da lista estava vencido.</div>
+  {% endif %}
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>2. Lista de presença do dia</h2>
+  <p class="card-subtitle">
+    Quando o RH manda quem realmente apareceu no dia. Reconhece quem fez (dá baixa na base mestre) e
+    quem da lista pendente da campanha não fez — abate automaticamente da lista pendente.
+  </p>
+  <form method="post" action="{{ url_for('campanha_processar_dia', campanha_id=campanha.id) }}" enctype="multipart/form-data">
+    <div class="field-row">
+      <div class="field">
+        <label for="data_relatorio">Data do atendimento</label>
+        <input type="date" id="data_relatorio" name="data_relatorio" value="{{ hoje }}">
+      </div>
+    </div>
+    <div class="field">
+      <label for="arquivo">Planilha do dia (.xlsx)</label>
+      <div class="file-drop">
+        Selecione a lista de presença enviada pelo RH
+        <br><input type="file" id="arquivo" name="arquivo" accept=".xlsx,.xls" required>
+      </div>
+    </div>
+    <button class="btn" type="submit">Processar dia</button>
+  </form>
+</div>
+
+{% if relatorio %}
+<div class="card">
+  <h2>Resultado — {{ relatorio.data_relatorio | data_br }}</h2>
+  <div class="stats-row">
+    <div class="stat-tile"><div class="stat-value">{{ relatorio.fizeram|length }}</div><div class="stat-label">Fizeram o exame</div></div>
+    <div class="stat-tile"><div class="stat-value">{{ relatorio.faltaram|length }}</div><div class="stat-label">Faltaram (agendados)</div></div>
+    <div class="stat-tile"><div class="stat-value">{{ relatorio.inconsistencias|length }}</div><div class="stat-label">Inconsistências</div></div>
+  </div>
+
+  {% if relatorio.fizeram %}
+  <h2>Fizeram</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Nome</th><th>Data realização</th></tr></thead>
+      <tbody>
+        {% for f in relatorio.fizeram %}<tr><td>{{ f.funcionario_id }}</td><td>{{ f.nome }}</td><td>{{ f.data_realizacao | data_br }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if relatorio.inconsistencias %}
+  <h2>Inconsistências</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Motivo</th><th>Detalhe</th></tr></thead>
+      <tbody>
+        {% for i in relatorio.inconsistencias %}<tr><td><span class="badge badge-danger">{{ i.motivo }}</span></td><td>{{ i.detalhe }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Quem ainda precisa fazer o exame ({{ pendentes|length }})</h2>
+  {% if pendentes %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Último ASO</th></tr></thead>
+      <tbody>
+        {% for p in pendentes %}<tr><td>{{ p.id }}</td><td>{{ p.nome }}</td><td>{{ p.funcao or '—' }}</td><td>{{ p.data_ultimo_aso | data_br }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">Todo mundo desta campanha já concluiu.</div>
+  {% endif %}
+</div>
+{% endblock %}

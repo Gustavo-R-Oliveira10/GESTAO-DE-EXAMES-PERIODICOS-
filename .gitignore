@@ -1,0 +1,27 @@
+# Dados reais (funcionários, CPF, ASOs, PDFs medicos) - NUNCA versionar.
+# Tudo que a ferramenta gera/le fica em app/data/.
+app/data/
+
+# Qualquer planilha Excel em qualquer lugar do projeto — nenhuma tem razão
+# pra ser versionada (é sempre base real ou arquivo de trabalho temporário).
+*.xlsx
+*.xls
+~$*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Logs de execução local
+*.log
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

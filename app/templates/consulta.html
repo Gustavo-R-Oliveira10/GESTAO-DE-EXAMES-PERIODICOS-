@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Consulta geral — Controle de Periódicos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Consulta geral</h1>
+  <p>Filtre por qualquer coluna da tabela e exporte a base atualizada a qualquer momento.</p>
+</div>
+
+<div class="card">
+  <div class="field-row" style="align-items:center; margin-bottom:4px">
+    <p class="text-muted" id="contador_resultados" style="margin:0"></p>
+    <div style="margin-left:auto; display:flex; gap:8px">
+      <button class="btn btn-outline btn-sm" type="button" onclick="limparFiltros()">Limpar filtros</button>
+      <a class="btn btn-secondary btn-sm" href="{{ url_for('consulta_exportar') }}">Exportar base atualizada</a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="tabela_funcionarios">
+      <thead>
+        <tr>
+          <th>ID</th><th>Nome</th><th>Local de trabalho</th><th>Função</th>
+          <th>Último ASO</th><th>Status ASO</th><th>Status fila</th>
+        </tr>
+        <tr class="filter-row">
+          <th><input type="text" class="col-filter" data-col="id" placeholder="Filtrar ID..." oninput="filtrarTabela()"></th>
+          <th><input type="text" class="col-filter" data-col="nome" placeholder="Filtrar nome..." oninput="filtrarTabela()"></th>
+          <th>
+            <select class="col-filter" data-col="local" onchange="filtrarTabela()">
+              <option value="">Todos</option>
+              {% for local in locais %}<option value="{{ local|lower }}">{{ local }}</option>{% endfor %}
+            </select>
+          </th>
+          <th><input type="text" class="col-filter" data-col="funcao" placeholder="Filtrar função..." oninput="filtrarTabela()"></th>
+          <th><input type="text" class="col-filter" data-col="aso" placeholder="Ex: 09/2026" oninput="filtrarTabela()"></th>
+          <th>
+            <select class="col-filter" data-col="statusaso" onchange="filtrarTabela()">
+              <option value="">Todos</option>
+              <option value="dispensado">Dispensado</option>
+              <option value="precisa">Precisa exame</option>
+              <option value="sem registro">Sem registro</option>
+            </select>
+          </th>
+          <th>
+            <select class="col-filter" data-col="statusfila" onchange="filtrarTabela()">
+              <option value="">Todos</option>
+              <option value="aguardando">Aguardando</option>
+              <option value="cobrança enviada">Cobrança enviada</option>
+              <option value="concluído">Concluído</option>
+              <option value="faltou">Faltou</option>
+            </select>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in funcionarios %}
+        {% if f.status_aso == 'Dispensado' %}{% set status_aso_chave = 'dispensado' %}
+        {% elif f.status_aso == 'Sem ASO registrado' %}{% set status_aso_chave = 'sem registro' %}
+        {% else %}{% set status_aso_chave = 'precisa' %}{% endif %}
+        <tr
+          data-id="{{ (f.id or '')|lower }}"
+          data-nome="{{ (f.nome or '')|lower }}"
+          data-local="{{ (f.local_trabalho or '')|lower }}"
+          data-funcao="{{ (f.funcao or '')|lower }}"
+          data-aso="{{ (f.data_ultimo_aso | data_br)|lower }}"
+          data-statusaso="{{ status_aso_chave }}"
+          data-statusfila="{{ (f.status_fila or 'aguardando')|lower }}"
+        >
+          <td>{{ f.id }}</td>
+          <td>{{ f.nome }}</td>
+          <td>{{ f.local_trabalho or '—' }}</td>
+          <td>{{ f.funcao or '—' }}</td>
+          <td>{{ f.data_ultimo_aso | data_br }}</td>
+          <td>
+            {% if status_aso_chave == 'dispensado' %}
+              <span class="badge badge-success">Dispensado</span>
+            {% elif status_aso_chave == 'sem registro' %}
+              <span class="badge badge-muted">Sem registro</span>
+            {% else %}
+              <span class="badge badge-warning">Precisa exame</span>
+            {% endif %}
+          </td>
+          <td>
+            {% set cores_fila = {'Aguardando':'badge-muted','Cobrança enviada':'badge-info','Concluído':'badge-success','Faltou':'badge-danger'} %}
+            <span class="badge {{ cores_fila.get(f.status_fila, 'badge-muted') }}">{{ f.status_fila or 'Aguardando' }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not funcionarios %}
+  <div class="empty-state">Nenhum funcionário na base ainda.</div>
+  {% endif %}
+</div>
+
+<script>
+function filtrarTabela() {
+  const filtros = {};
+  document.querySelectorAll('.col-filter').forEach(function (el) {
+    filtros[el.dataset.col] = el.value.trim().toLowerCase();
+  });
+  const linhas = document.querySelectorAll('#tabela_funcionarios tbody tr');
+  let visiveis = 0;
+  linhas.forEach(function (linha) {
+    let mostrar = true;
+    for (const col in filtros) {
+      if (!filtros[col]) continue;
+      const valor = linha.dataset[col] || '';
+      const bate = (col === 'local' || col === 'statusaso' || col === 'statusfila')
+        ? valor === filtros[col]
+        : valor.includes(filtros[col]);
+      if (!bate) { mostrar = false; break; }
+    }
+    linha.hidden = !mostrar;
+    if (mostrar) visiveis++;
+  });
+  document.getElementById('contador_resultados').textContent = visiveis + ' de ' + linhas.length + ' funcionários';
+}
+function limparFiltros() {
+  document.querySelectorAll('.col-filter').forEach(function (el) { el.value = ''; });
+  filtrarTabela();
+}
+filtrarTabela();
+</script>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Controle de Periódicos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard — Campanha 2026</h1>
+  <p>Visão geral da base mestre fixa, por local de trabalho.</p>
+</div>
+
+{% if not base_existe %}
+<div class="card">
+  <div class="alert alert-warning">
+    Base mestre fixa não encontrada em <code>{{ caminho_base }}</code>.
+    Coloque o arquivo Excel da campanha 2026 nesse caminho e reinicie o servidor.
+  </div>
+</div>
+{% else %}
+
+<div class="stats-row">
+  <div class="stat-tile">
+    <div class="stat-head">
+      <span class="stat-icon icon-primary">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      </span>
+    </div>
+    <div class="stat-value">{{ totais.total or 0 }}</div>
+    <div class="stat-label">Total de funcionários (vigentes)</div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-head">
+      <span class="stat-icon icon-success">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+      </span>
+    </div>
+    <div class="stat-value" style="color: var(--success)">{{ totais.dispensados or 0 }}</div>
+    <div class="stat-label">Dispensados (ASO de maio em diante)</div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-head">
+      <span class="stat-icon icon-warning">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+      </span>
+    </div>
+    <div class="stat-value" style="color: var(--warning)">{{ totais.precisam_exame or 0 }}</div>
+    <div class="stat-label">Precisam de exame / vencidos</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Meta de conclusão por local de trabalho</h2>
+  <p class="card-subtitle">Percentual de funcionários já dispensados (ASO em dia) em cada local.</p>
+  {% if progresso %}
+    {% for p in progresso %}
+    <div style="margin-bottom:16px">
+      <div class="progress-meta">
+        <strong>{{ p.local_trabalho }}</strong>
+        <span class="text-muted">{{ p.dispensados }}/{{ p.total }} · {{ p.percentual }}%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:{{ p.percentual }}%"></div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">Nenhum funcionário na base ainda.</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Base mestre fixa</h2>
+  <p class="card-subtitle">
+    Arquivo: <code>{{ caminho_base }}</code>. A leitura inicial só acontece uma vez
+    (banco vazio). Use o botão abaixo quando o RH atualizar o arquivo — cadastro é
+    atualizado, mas o progresso de exames já processado nunca é apagado.
+  </p>
+  <form method="post" action="{{ url_for('dashboard_recarregar') }}">
+    <button class="btn btn-secondary" type="submit">Recarregar base do arquivo</button>
+  </form>
+</div>
+
+{% endif %}
+{% endblock %}

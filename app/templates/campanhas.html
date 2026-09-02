@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Campanhas — Controle de Periódicos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Campanhas</h1>
+  <p>Cada campanha atende um local de trabalho num período — sobe as listas diárias e acompanha o progresso.</p>
+</div>
+
+<div class="card">
+  <h2>Nova campanha</h2>
+  <form method="post">
+    <div class="field-row">
+      <div class="field">
+        <label for="local_trabalho">Local de trabalho</label>
+        <input type="text" id="local_trabalho" name="local_trabalho" list="locais_sugeridos" placeholder="Ex: Brasília" required>
+        <datalist id="locais_sugeridos">
+          {% for local in locais %}<option value="{{ local }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="field">
+        <label for="data_inicio">Início</label>
+        <input type="date" id="data_inicio" name="data_inicio" required>
+      </div>
+      <div class="field">
+        <label for="data_fim">Fim</label>
+        <input type="date" id="data_fim" name="data_fim" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="detalhe_operacao">Detalhe da operação (opcional)</label>
+      <input type="text" id="detalhe_operacao" name="detalhe_operacao" placeholder="Ex: 09h00 às 18h00 (8h de atendimento)">
+    </div>
+    <div class="field">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:400">
+        <input type="checkbox" name="kits_enviados" style="width:auto"> Kits enviados
+      </label>
+    </div>
+    <button class="btn" type="submit">Criar campanha</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Campanhas existentes</h2>
+  {% if campanhas %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Local</th><th>Período</th><th>Kits</th><th>Lista do RH</th><th>Progresso</th><th></th></tr></thead>
+      <tbody>
+        {% for c in campanhas %}
+        <tr>
+          <td>
+            {{ c.local_trabalho }}
+            {% if c.detalhe_operacao %}<br><span class="text-muted" style="font-size:12px">{{ c.detalhe_operacao }}</span>{% endif %}
+          </td>
+          <td>{{ c.data_inicio | data_br }} — {{ c.data_fim | data_br }}</td>
+          <td>{% if c.kits_enviados %}<span class="badge badge-success">Enviados</span>{% else %}<span class="badge badge-muted">Pendente</span>{% endif %}</td>
+          <td>{% if c.lista_rh_travada %}<span class="badge badge-success">Processada</span>{% else %}<span class="badge badge-warning">Aguardando</span>{% endif %}</td>
+          <td style="min-width:160px">
+            <div class="progress-meta" style="font-size:12px">
+              <span>{{ c.concluidos }}/{{ c.total_membros }}</span><span>{{ c.percentual_concluido }}%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:{{ c.percentual_concluido }}%"></div>
+            </div>
+          </td>
+          <td><a class="btn btn-sm btn-outline" href="{{ url_for('campanha_detalhe', campanha_id=c.id) }}">Abrir</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">Nenhuma campanha criada ainda.</div>
+  {% endif %}
+</div>
+{% endblock %}

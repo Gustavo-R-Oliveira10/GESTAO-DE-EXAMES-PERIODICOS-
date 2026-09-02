@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}PDFs pendentes — Controle de Periódicos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>PDFs pendentes de identificação</h1>
+  <p>Confirme de quem é o ASO — o arquivo só é organizado depois da sua confirmação.</p>
+</div>
+
+<div class="card">
+  {% if pendentes %}
+    {% for exc in pendentes %}
+    <div class="exception-item">
+      <strong>#{{ exc.id }}</strong> — {{ exc.arquivo_origem }} (páginas {{ exc.paginas }})
+      {% if exc.metodo_extracao == 'falhou' %}
+      <div class="alert alert-danger" style="margin-top:10px">
+        Não foi possível extrair texto desta página (provável PDF escaneado sem Tesseract OCR
+        instalado na máquina). Confira o PDF manualmente.
+      </div>
+      {% endif %}
+      <div class="raw-text">{{ exc.texto_extraido or '(vazio)' }}</div>
+
+      <form method="post" action="{{ url_for('pdfs_pendentes_resolver', excecao_id=exc.id) }}">
+        {% set candidatos = exc.candidatos_json | from_json %}
+        {% if candidatos %}
+          {% for c in candidatos %}
+          <label class="candidate-option">
+            <input type="radio" name="funcionario_id" value="{{ c.funcionario_id }}">
+            {{ c.nome }} <span class="text-muted">(score {{ '%.0f' % c.score }}, id {{ c.funcionario_id }})</span>
+          </label>
+          {% endfor %}
+        {% endif %}
+        <div class="field" style="max-width:280px; margin-top:8px">
+          <label>Ou informe o ID (Matrícula) manualmente</label>
+          <input type="text" name="funcionario_id_manual" placeholder="Ex: 928956">
+        </div>
+        <button class="btn btn-sm" type="submit" style="margin-top:10px">Confirmar e organizar PDF</button>
+      </form>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">Nenhum PDF pendente no momento.</div>
+  {% endif %}
+</div>
+{% endblock %}

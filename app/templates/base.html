@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Controle de Periódicos{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/></svg>
+        </span>
+        <span class="brand-text">Controle de Periódicos<small>Exames ocupacionais</small></span>
+      </div>
+
+      <span class="nav-section-label">Visão geral</span>
+      <a class="nav-link {{ 'active' if active == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-link {{ 'active' if active == 'consulta' else '' }}" href="{{ url_for('consulta') }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        Consulta geral
+      </a>
+
+      <span class="nav-section-label">Operação</span>
+      <a class="nav-link {{ 'active' if active == 'campanhas' else '' }}" href="{{ url_for('campanhas') }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Campanhas
+      </a>
+      <a class="nav-link {{ 'active' if active == 'excecoes' else '' }}" href="{{ url_for('excecoes') }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        Fila de exceções
+        {% if contagem_excecoes %}<span class="badge badge-warning" style="margin-left:auto">{{ contagem_excecoes }}</span>{% endif %}
+      </a>
+      <a class="nav-link {{ 'active' if active == 'separar_pdfs' else '' }}" href="{{ url_for('separar_pdfs') }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+        Separar PDFs
+      </a>
+      <a class="nav-link {{ 'active' if active == 'pdfs_pendentes' else '' }}" href="{{ url_for('pdfs_pendentes') }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        PDFs pendentes
+        {% if contagem_pdfs_pendentes %}<span class="badge badge-warning" style="margin-left:auto">{{ contagem_pdfs_pendentes }}</span>{% endif %}
+      </a>
+
+      <span class="nav-section-label">Suporte</span>
+      <a class="nav-link {{ 'active' if active == 'logs' else '' }}" href="{{ url_for('logs') }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Histórico / Logs
+      </a>
+    </aside>
+
+    <main class="main">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for categoria, mensagem in messages %}
+            <div class="alert alert-{{ categoria }}">{{ mensagem }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

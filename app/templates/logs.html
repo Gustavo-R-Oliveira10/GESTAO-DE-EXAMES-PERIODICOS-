@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Histórico / Logs — Controle de Periódicos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Histórico / Logs</h1>
+  <p>Registro de tudo que altera a base mestre: baixas diárias, criação de campanhas, recargas da base.</p>
+</div>
+
+<div class="card">
+  {% if eventos %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data/hora</th><th>Ação</th><th>Detalhe</th></tr></thead>
+      <tbody>
+        {% for e in eventos %}
+        <tr><td>{{ e.data_hora | datahora_br }}</td><td><span class="badge badge-info">{{ e.acao }}</span></td><td>{{ e.detalhe }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">Nenhum evento registrado ainda.</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Fila de exceções — Controle de Periódicos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Fila de exceções</h1>
+  <p>
+    Linhas de uma planilha (baixa diária) que o sistema <strong>não conseguiu casar automaticamente</strong>
+    com ninguém da base mestre (ID, CPF e nome não bateram). Ficam aqui pra você confirmar manualmente —
+    nada é gravado na base mestre sem essa confirmação.
+  </p>
+</div>
+
+{% if pendentes %}
+<div class="card">
+  <form method="post" action="{{ url_for('excecoes_lote') }}" id="form_lote">
+    <div class="field-row" style="align-items:center; margin-bottom:16px">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin:0">
+        <input type="checkbox" id="selecionar_todas" onclick="marcarTodas(this)" style="width:auto">
+        Selecionar todas ({{ pendentes|length }})
+      </label>
+      <div style="margin-left:auto; display:flex; gap:8px">
+        <button class="btn btn-secondary btn-sm" type="submit" name="acao" value="aprovar"
+          onclick="return confirm('Aprovar as selecionadas com o melhor candidato sugerido (só quando o score for alto, ≥85)? As com candidato fraco continuam pendentes.')">
+          Aprovar selecionadas
+        </button>
+        <button class="btn btn-outline btn-sm" type="submit" name="acao" value="excluir"
+          onclick="return confirm('Excluir as selecionadas da fila (sem vincular a ninguém)?')">
+          Excluir selecionadas
+        </button>
+      </div>
+    </div>
+
+    {% for exc in pendentes %}
+    <div class="exception-item">
+      <label style="display:flex; align-items:flex-start; gap:10px">
+        <input type="checkbox" name="selecionados" value="{{ exc.id }}" class="chk_item" style="width:auto; margin-top:3px">
+        <div style="flex:1">
+          <strong>#{{ exc.id }}</strong> — "{{ exc.texto_bruto }}"
+          {% set candidatos = exc.candidatos_json | from_json %}
+          {% if candidatos %}
+          <div style="margin-top:8px">
+            {% for c in candidatos %}
+            <div class="candidate-option">
+              <input type="radio" name="candidato_{{ exc.id }}" disabled>
+              {{ c.nome }} <span class="text-muted">(score {{ '%.0f' % c.score }}, id {{ c.funcionario_id }})</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-muted" style="margin-top:6px; font-size:13px">Nenhum candidato sugerido — não pode ser aprovada em lote.</div>
+          {% endif %}
+
+          <form method="post" action="{{ url_for('excecoes_resolver', excecao_id=exc.id) }}" style="margin-top:10px">
+            {% if candidatos %}
+            <select name="funcionario_id" style="max-width:340px; display:inline-block">
+              {% for c in candidatos %}
+              <option value="{{ c.funcionario_id }}">{{ c.nome }} (score {{ '%.0f' % c.score }}, id {{ c.funcionario_id }})</option>
+              {% endfor %}
+              <option value="">Nenhum destes / ignorar</option>
+            </select>
+            {% else %}
+            <input type="hidden" name="funcionario_id" value="">
+            {% endif %}
+            <button class="btn btn-sm" type="submit">Confirmar individualmente</button>
+          </form>
+        </div>
+      </label>
+    </div>
+    {% endfor %}
+  </form>
+</div>
+
+<div class="card">
+  <h2>Limpar tudo</h2>
+  <p class="card-subtitle">Remove todas as {{ pendentes|length }} pendências da fila sem vincular a ninguém. Use se a fila encheu por um erro de importação (ex: planilha sem cabeçalho reconhecível).</p>
+  <form method="post" action="{{ url_for('excecoes_limpar_tudo') }}"
+    onsubmit="return confirm('Isso remove TODAS as {{ pendentes|length }} exceções pendentes da fila, sem vincular ninguém. Confirmar?')">
+    <button class="btn btn-outline" type="submit">Limpar toda a fila</button>
+  </form>
+</div>
+
+<script>
+function marcarTodas(origem) {
+  document.querySelectorAll('.chk_item').forEach(function (chk) { chk.checked = origem.checked; });
+}
+</script>
+{% else %}
+<div class="card">
+  <div class="empty-state">Nenhuma exceção pendente no momento.</div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Separar PDFs — Controle de Periódicos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Separar PDFs</h1>
+  <p>Separa o lote de ASOs da clínica em um PDF individual por pessoa.</p>
+</div>
+
+<div class="card">
+  <h2>Processar lote</h2>
+  <p class="card-subtitle">
+    Quem não for identificado com confiança fica em "PDFs pendentes" para revisão manual —
+    nada é descartado nem colado no arquivo errado.
+  </p>
+  <form method="post" enctype="multipart/form-data">
+    <div class="field">
+      <label for="local_trabalho">Local de trabalho do lote (opcional, ajuda a evitar confusão entre locais)</label>
+      <input type="text" id="local_trabalho" name="local_trabalho" placeholder="Ex: Brasília">
+    </div>
+    <div class="field">
+      <label for="arquivo">PDF do lote</label>
+      <div class="file-drop">
+        Selecione o PDF gigante enviado pela clínica
+        <br><input type="file" id="arquivo" name="arquivo" accept=".pdf" required>
+      </div>
+    </div>
+    <button class="btn" type="submit">Processar lote</button>
+  </form>
+</div>
+
+{% if relatorio %}
+<div class="card">
+  <h2>Resultado</h2>
+  <div class="stats-row">
+    <div class="stat-tile"><div class="stat-value">{{ relatorio.separados|length }}</div><div class="stat-label">PDFs separados</div></div>
+    <div class="stat-tile"><div class="stat-value">{{ relatorio.pendentes|length }}</div><div class="stat-label">Pendentes de revisão</div></div>
+  </div>
+
+  {% if relatorio.separados %}
+  <h2>Separados</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Nome</th><th>Páginas</th><th>Arquivo</th></tr></thead>
+      <tbody>
+        {% for s in relatorio.separados %}
+        <tr><td>{{ s.funcionario_id }}</td><td>{{ s.nome }}</td><td>{{ s.paginas }}</td><td class="text-muted">{{ s.arquivo }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if relatorio.pendentes %}
+  <div class="alert alert-warning" style="margin-top:16px">
+    {{ relatorio.pendentes|length }} documento(s) não identificados automaticamente.
+    <a href="{{ url_for('pdfs_pendentes') }}">Revisar agora</a>.
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
