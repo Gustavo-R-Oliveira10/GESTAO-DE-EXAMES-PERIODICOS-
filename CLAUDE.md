@@ -32,6 +32,28 @@ python server.py
 Abre em `http://localhost:8501`. Não é `flask run` — o entrypoint é
 `server.py` diretamente (tem `app.run(...)` no final do arquivo).
 
+**Ou dê 2 cliques em `iniciar_app.vbs`** (raiz do projeto) — sobe o servidor
+em segundo plano (sem janela de terminal) e abre numa janela própria do Edge
+(`--app=`, sem barra de endereço), como se fosse um programa instalado. Pra
+criar um atalho na área de trabalho: botão direito no `.vbs` → Enviar para →
+Área de trabalho (criar atalho).
+
+## Git
+
+Repositório: https://github.com/Gustavo-R-Oliveira10/GESTAO-DE-EXAMES-PERIODICOS-.
+Fluxo de trabalho (branch → commit → push → merge pra main) documentado em
+`GIT_WORKFLOW.md` — siga sempre esse passo a passo.
+
+**`.gitignore` crítico:** `app/data/` inteira (banco, base mestre real, logs,
+PDFs de ASO) e qualquer `.xlsx`/`.xls` em qualquer lugar do projeto nunca são
+versionados — são dados reais de funcionário (nome, CPF, resultado de exame
+médico). **Sempre rode `git status` antes de `git add -A`** e confira que
+nada disso aparece na lista antes de commitar. Já aconteceu uma vez, nesta
+sessão, de um `PERIODICOS - BASE MESTRA.xlsx` real estar solto na raiz do
+projeto e quase ir pro primeiro commit — foi pego a tempo revisando o
+`git status` antes de commitar, e o `.gitignore` foi reforçado com um padrão
+`*.xlsx`/`*.xls` genérico por causa disso.
+
 Nota de ambiente: o mirror pip corporativo (`mirrors.tools.huawei.com`) não
 resolveu neste ambiente de desenvolvimento; as dependências foram instaladas
 via `pip install --index-url https://pypi.org/simple -r requirements.txt`.
