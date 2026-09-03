@@ -8,11 +8,32 @@ Set WshShell = CreateObject("WScript.Shell")
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
 WshShell.CurrentDirectory = scriptDir & "\app"
 
+' Acha o pythonw.exe instalado — usar caminho completo em vez de "pythonw" puro,
+' porque WshShell.Run nem sempre resolve o PATH do jeito que um terminal normal
+' resolveria (pode cair no stub do Windows Store e falhar em silêncio).
+pythonwPaths = Array( _
+  WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%") & "\Programs\Python\Python314\pythonw.exe", _
+  WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%") & "\Python\bin\pythonw.exe" _
+)
+
+pythonwEncontrado = ""
+For Each caminho In pythonwPaths
+  If fso.FileExists(caminho) Then
+    pythonwEncontrado = caminho
+    Exit For
+  End If
+Next
+
+If pythonwEncontrado = "" Then
+  MsgBox "Não encontrei o pythonw.exe instalado. Abra o app manualmente: 'cd app' e 'python server.py'.", 16, "Controle de Periódicos"
+  WScript.Quit
+End If
+
 ' Sobe o servidor Flask em segundo plano, sem janela (pythonw = sem console)
-WshShell.Run "pythonw server.py", 0, False
+WshShell.Run """" & pythonwEncontrado & """ server.py", 0, False
 
 ' Dá um tempinho pro servidor subir antes de abrir o navegador
-WScript.Sleep 2000
+WScript.Sleep 3000
 
 ' Acha o Edge instalado (32 ou 64 bits) e abre em modo "app"
 edgePaths = Array( _
