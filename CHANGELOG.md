@@ -2,6 +2,35 @@
 
 Histórico das alterações do projeto, em ordem cronológica.
 
+## 2026-09-03 (2) — Baixa diária tratava "apareceu na planilha" como "fez o exame"
+
+Branch `fix-baixa-nao-considera-pendente`, mesclada em `main`.
+
+- **Bug crítico real, relatado pelo usuário em produção**: ele subiu a lista
+  de presença de Brasília (planilha com todo mundo, coluna "Data Aso" com a
+  data real OU o texto "Pendente" por pessoa) e o sistema deu baixa em
+  **todo mundo que bateu**, sem olhar se a linha dizia "Pendente" — porque a
+  planilha real usa a coluna "Data Aso" (mapeada pra `data_ultimo_aso`), e o
+  código só olhava `data_realizacao` (que não existe nessa planilha),
+  caindo sempre no fallback "assume que fez hoje".
+- Corrigido `baixa_diaria.py` com `_situacao_da_linha()`: interpreta o valor
+  da linha (data válida = fez; "Pendente"/variantes = ainda não fez, sem
+  baixa; célula vazia = lista de presença pura, assume a data do relatório;
+  texto não reconhecido = inconsistência, não decide sozinho). Novo bucket
+  no relatório "Ainda pendentes (na planilha)".
+- **Produção já tinha sido afetada**: 67 pessoas da campanha de Brasília
+  levaram baixa incorreta antes da correção. Revertido manualmente — usando
+  o backup do arquivo mestre feito mais cedo no mesmo dia como fonte da
+  verdade — depois de confirmar via log que essa foi a **única** baixa
+  diária real já processada (log só tinha esse evento), então dava pra
+  identificar com segurança quem tinha sido tocado por ele (`status_fila =
+  'Concluído'` — campo que só a baixa diária seta). Backup extra do banco
+  antes de reverter. Campanha voltou ao estado correto (72 convocados/7
+  concluídos, igual antes do upload errado).
+- 4 novos testes de regressão em `test_baixa_diaria.py` cobrindo os quatro
+  casos (Pendente, data real, planilha sem coluna de data, texto inválido) —
+  suite total agora com 60 testes.
+
 ## 2026-09-03 — Correção crítica de datas, base mestre real, testes automatizados, Git
 
 Branch `atualizar-base-mestra-e-backup`, mesclada em `main`.
