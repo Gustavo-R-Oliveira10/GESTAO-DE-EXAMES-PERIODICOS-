@@ -30,11 +30,19 @@ class Campanha:
     detalhe_operacao: str | None = None
     lista_rh_processada_em: str | None = None
     lista_rh_arquivo: str | None = None
-    total_membros: int = 0       # Convocados — ASO vencido no cruzamento com a lista do RH
+    total_funcionarios_filial: int = 0  # todo mundo do local_trabalho, independente de precisar de exame
+    total_membros: int = 0       # meta desta campanha — ASO vencido no cruzamento com a lista do RH
     concluidos: int = 0          # fizeram + nao_precisou (status_aso='Dispensado', por qualquer motivo)
-    fizeram: int = 0             # compareceram de verdade nesta campanha (campanha_atendimentos)
+    fizeram: int = 0             # da própria filial que compareceram de verdade nesta campanha
+    fora_do_local: int = 0       # de OUTRA filial que também compareceram aqui (ex: SP fazendo em Brasília)
     nao_precisou: int = 0        # já estavam com ASO em dia por outro motivo, nunca vieram a esta campanha
     pendentes: int = 0           # ainda precisam fazer o exame
+
+    @property
+    def fizeram_total(self) -> int:
+        """Total de comparecimentos reais nesta campanha, incluindo gente de
+        fora da filial — é o número físico de exames feitos aqui."""
+        return self.fizeram + self.fora_do_local
 
     @property
     def percentual_concluido(self) -> float:
@@ -45,7 +53,8 @@ class Campanha:
     @property
     def percentual_compareceram(self) -> float:
         """% de quem realmente veio fazer o exame nesta campanha (exclui
-        quem já estava em dia por fora) — mede o comparecimento de verdade."""
+        quem já estava em dia por fora) — mede o comparecimento de verdade.
+        Só conta gente da própria filial (fora_do_local não faz parte da meta)."""
         if not self.total_membros:
             return 0.0
         return round(self.fizeram / self.total_membros * 100, 1)
@@ -98,38 +107,62 @@ def _linha_para_campanha(row) -> Campanha:
         detalhe_operacao=row["detalhe_operacao"],
         lista_rh_processada_em=row["lista_rh_processada_em"],
         lista_rh_arquivo=row["lista_rh_arquivo"],
+        total_funcionarios_filial=row["total_funcionarios_filial"] or 0,
         total_membros=row["total_membros"] or 0,
         concluidos=row["concluidos"] or 0,
         fizeram=row["fizeram"] or 0,
+        fora_do_local=row["fora_do_local"] or 0,
         nao_precisou=row["nao_precisou"] or 0,
         pendentes=row["pendentes"] or 0,
     )
 
 
+# Subconsultas em vez de JOIN único: um LEFT JOIN encadeado (membros -> ca)
+# multiplicaria linhas e complicaria contar "fora_do_local" (que por
+# definição não está em campanha_membros) na mesma query. Cada métrica fica
+# isolada e correta, ao custo de mais subqueries — no volume desta tabela
+# (algumas dezenas de campanhas) é irrelevante pra performance.
 _QUERY_CAMPANHAS_COM_PROGRESSO = """
     SELECT c.*,
-           COUNT(DISTINCT cm.funcionario_id) AS total_membros,
-           SUM(CASE WHEN f.status_aso = 'Dispensado' THEN 1 ELSE 0 END) AS concluidos,
-           SUM(CASE WHEN ca.funcionario_id IS NOT NULL THEN 1 ELSE 0 END) AS fizeram,
-           SUM(CASE WHEN f.status_aso = 'Dispensado' AND ca.funcionario_id IS NULL THEN 1 ELSE 0 END) AS nao_precisou,
-           SUM(CASE WHEN f.status_aso != 'Dispensado' THEN 1 ELSE 0 END) AS pendentes
+        (SELECT COUNT(*) FROM funcionarios f WHERE f.local_trabalho = c.local_trabalho)
+            AS total_funcionarios_filial,
+        (SELECT COUNT(*) FROM campanha_membros cm WHERE cm.campanha_id = c.id)
+            AS total_membros,
+        (SELECT COUNT(*) FROM campanha_membros cm JOIN funcionarios f ON f.id = cm.funcionario_id
+            WHERE cm.campanha_id = c.id AND f.status_aso = 'Dispensado')
+            AS concluidos,
+        (SELECT COUNT(*) FROM campanha_membros cm JOIN campanha_atendimentos ca
+            ON ca.campanha_id = cm.campanha_id AND ca.funcionario_id = cm.funcionario_id
+            WHERE cm.campanha_id = c.id)
+            AS fizeram,
+        (SELECT COUNT(*) FROM campanha_atendimentos ca
+            WHERE ca.campanha_id = c.id
+            AND NOT EXISTS (
+                SELECT 1 FROM campanha_membros cm
+                WHERE cm.campanha_id = ca.campanha_id AND cm.funcionario_id = ca.funcionario_id
+            ))
+            AS fora_do_local,
+        (SELECT COUNT(*) FROM campanha_membros cm JOIN funcionarios f ON f.id = cm.funcionario_id
+            LEFT JOIN campanha_atendimentos ca ON ca.campanha_id = cm.campanha_id AND ca.funcionario_id = cm.funcionario_id
+            WHERE cm.campanha_id = c.id AND f.status_aso = 'Dispensado' AND ca.funcionario_id IS NULL)
+            AS nao_precisou,
+        (SELECT COUNT(*) FROM campanha_membros cm JOIN funcionarios f ON f.id = cm.funcionario_id
+            WHERE cm.campanha_id = c.id AND f.status_aso != 'Dispensado')
+            AS pendentes
     FROM campanhas c
-    LEFT JOIN campanha_membros cm ON cm.campanha_id = c.id
-    LEFT JOIN funcionarios f ON f.id = cm.funcionario_id
-    LEFT JOIN campanha_atendimentos ca ON ca.campanha_id = cm.campanha_id AND ca.funcionario_id = cm.funcionario_id
 """
 
 
 def listar_campanhas(conn: Connection) -> list[Campanha]:
     rows = conn.execute(
-        _QUERY_CAMPANHAS_COM_PROGRESSO + " GROUP BY c.id ORDER BY c.criado_em DESC"
+        _QUERY_CAMPANHAS_COM_PROGRESSO + " ORDER BY c.criado_em DESC"
     ).fetchall()
     return [_linha_para_campanha(r) for r in rows]
 
 
 def obter_campanha(conn: Connection, campanha_id: int) -> Campanha | None:
     row = conn.execute(
-        _QUERY_CAMPANHAS_COM_PROGRESSO + " WHERE c.id = ? GROUP BY c.id", (campanha_id,)
+        _QUERY_CAMPANHAS_COM_PROGRESSO + " WHERE c.id = ?", (campanha_id,)
     ).fetchone()
     return _linha_para_campanha(row) if row else None
 
@@ -161,14 +194,39 @@ def listar_membros_concluidos(conn: Connection, campanha_id: int) -> list[dict]:
 
 
 def listar_membros_fizeram(conn: Connection, campanha_id: int) -> list[dict]:
-    """Quem realmente compareceu (recebeu baixa) nesta campanha, com a data
-    de comparecimento — base do detalhamento por dia."""
+    """Quem da própria filial (convocado desta campanha) realmente
+    compareceu, com a data de comparecimento. Não inclui gente de fora da
+    filial que também fez aqui — ver `listar_membros_fora_do_local`."""
+    rows = conn.execute(
+        """
+        SELECT f.*, ca.data_atendimento
+        FROM campanha_atendimentos ca
+        JOIN funcionarios f ON f.id = ca.funcionario_id
+        JOIN campanha_membros cm ON cm.campanha_id = ca.campanha_id AND cm.funcionario_id = ca.funcionario_id
+        WHERE ca.campanha_id = ?
+        ORDER BY ca.data_atendimento, f.nome
+        """,
+        (campanha_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def listar_membros_fora_do_local(conn: Connection, campanha_id: int) -> list[dict]:
+    """Gente de OUTRA filial que compareceu nesta campanha (ex: alguém
+    lotado em São Paulo que fez o exame na campanha de Brasília). Casa
+    sempre pelo ID/matrícula — nunca deixa de dar baixa na base mestre só
+    porque a pessoa não é 'da casa' deste local; só fica sinalizado à parte
+    pra não inflar a meta/headcount da filial que sediou o atendimento."""
     rows = conn.execute(
         """
         SELECT f.*, ca.data_atendimento
         FROM campanha_atendimentos ca
         JOIN funcionarios f ON f.id = ca.funcionario_id
         WHERE ca.campanha_id = ?
+        AND NOT EXISTS (
+            SELECT 1 FROM campanha_membros cm
+            WHERE cm.campanha_id = ca.campanha_id AND cm.funcionario_id = ca.funcionario_id
+        )
         ORDER BY ca.data_atendimento, f.nome
         """,
         (campanha_id,),

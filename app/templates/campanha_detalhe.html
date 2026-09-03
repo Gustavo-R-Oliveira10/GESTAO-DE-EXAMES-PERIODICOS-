@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m %}
 {% block title %}{{ campanha.local_trabalho }} — Campanha — Controle de Periódicos{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -10,16 +11,49 @@
 </div>
 
 <div class="stats-row">
-  <div class="stat-tile"><div class="stat-value">{{ campanha.total_membros }}</div><div class="stat-label">Convocados (meta desta campanha)</div></div>
-  <div class="stat-tile"><div class="stat-value" style="color:var(--success)">{{ campanha.fizeram }}</div><div class="stat-label">Fizeram o exame aqui</div></div>
-  <div class="stat-tile"><div class="stat-value" style="color:var(--accent-blue)">{{ campanha.nao_precisou }}</div><div class="stat-label">Não precisaram (ASO já em dia)</div></div>
-  <div class="stat-tile"><div class="stat-value" style="color:var(--warning)">{{ campanha.pendentes }}</div><div class="stat-label">Ainda pendentes</div></div>
+  <div class="stat-tile">
+    <div class="stat-value">{{ campanha.total_funcionarios_filial }}</div>
+    <div class="stat-label">Total de funcionários na filial</div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-value" style="color:var(--accent-blue)">{{ campanha.total_membros }}</div>
+    <div class="stat-label">Meta desta campanha</div>
+  </div>
+  <a class="stat-tile-link" href="#painel-fizeram" data-target="painel-fizeram">
+    <div class="stat-tile" style="position:relative">
+      <div class="stat-value" style="color:var(--success)">{{ campanha.fizeram }}</div>
+      <div class="stat-label">Compareceram</div>
+    </div>
+  </a>
+  <a class="stat-tile-link" href="#painel-nao-precisou" data-target="painel-nao-precisou">
+    <div class="stat-tile" style="position:relative">
+      <div class="stat-value" style="color:var(--accent-blue)">{{ campanha.nao_precisou }}</div>
+      <div class="stat-label">Já estavam em dia</div>
+    </div>
+  </a>
+  <a class="stat-tile-link" href="#painel-pendentes" data-target="painel-pendentes">
+    <div class="stat-tile" style="position:relative">
+      <div class="stat-value" style="color:var(--warning)">{{ campanha.pendentes }}</div>
+      <div class="stat-label">Ainda pendentes</div>
+    </div>
+  </a>
+  {% if campanha.fora_do_local %}
+  <a class="stat-tile-link" href="#painel-fora-do-local" data-target="painel-fora-do-local">
+    <div class="stat-tile" style="position:relative">
+      <div class="stat-value" style="color:var(--accent-blue)">{{ campanha.fora_do_local }}</div>
+      <div class="stat-label">De outra filial, fizeram aqui</div>
+    </div>
+  </a>
+  {% endif %}
 </div>
 <p class="text-muted" style="font-size:12.5px; margin:-10px 0 20px 0">
-  "Convocados" é a foto de quem estava com o ASO vencido no momento em que a lista do RH foi cruzada
-  — é a meta fixa da campanha. Não significa que os {{ campanha.total_membros }} continuam vencidos
-  hoje: os {{ campanha.nao_precisou }} "Não precisaram" já viraram vigentes por fora; só os
+  "Meta desta campanha" é a foto de quem estava com o ASO vencido no momento em que a lista do RH foi
+  cruzada — nem todos os {{ campanha.total_membros }} continuam vencidos hoje: os
+  {{ campanha.nao_precisou }} "Já estavam em dia" viraram vigentes por fora; só os
   {{ campanha.pendentes }} "Ainda pendentes" estão vencidos agora, de verdade.
+  {% if campanha.fora_do_local %} Além disso, {{ campanha.fora_do_local }} pessoa(s) de outra filial
+  também compareceram aqui — não contam pra meta de {{ campanha.local_trabalho }}, mas já foram
+  atualizadas na base mestre normalmente.{% endif %}
 </p>
 
 <div class="card">
@@ -39,7 +73,7 @@
 {% if dias %}
 <div class="card">
   <h2>Atendimento por dia</h2>
-  <p class="card-subtitle">Dias oficiais do cronograma médico desta campanha, com quantos compareceram em cada um.</p>
+  <p class="card-subtitle">Dias oficiais do cronograma médico desta campanha, com quantos compareceram em cada um (inclui gente de outra filial, se houver).</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Data</th><th>Horário</th><th>Compareceram</th></tr></thead>
@@ -64,8 +98,8 @@
   <p class="card-subtitle">
     A planilha que o RH de {{ campanha.local_trabalho }} te manda com quem precisa fazer o exame.
     Cruza contra a base mestre e barra automaticamente quem já está "Dispensado" (ASO em dia) —
-    só quem está com o ASO vencido entra como "Convocado" e conta pra meta da campanha. Quem não
-    bateu vai para a fila de exceções. <strong>Esse envio só pode ser feito uma vez por campanha.</strong>
+    só quem está com o ASO vencido entra como meta desta campanha. Quem não bateu vai para a fila
+    de exceções. <strong>Esse envio só pode ser feito uma vez por campanha.</strong>
   </p>
   <form method="post" action="{{ url_for('campanha_importar_rh', campanha_id=campanha.id) }}" enctype="multipart/form-data">
     <div class="field">
@@ -87,40 +121,23 @@
     (arquivo: <strong>{{ campanha.lista_rh_arquivo }}</strong>) — não pode ser reenviada para esta campanha.
   </div>
 
-  <div class="stats-row">
-    <div class="stat-tile"><div class="stat-value">{{ convocados|length }}</div><div class="stat-label">Convocados (vencidos no cruzamento)</div></div>
-    <div class="stat-tile"><div class="stat-value" style="color:var(--success)">{{ ja_dispensados|length }}</div><div class="stat-label">Já dispensados (barrados da meta)</div></div>
-  </div>
+  {% call m.accordion('painel-convocados-rh', 'Convocados (vencidos no cruzamento)', convocados|length, vazio_texto='Nenhum convocado — todo mundo da lista já estava com o ASO em dia.') %}
+  <table>
+    <thead><tr><th>ID</th><th>Nome</th></tr></thead>
+    <tbody>
+      {% for c in convocados %}<tr><td>{{ c.funcionario_id }}</td><td>{{ c.nome }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% endcall %}
 
-  <h2>Convocados</h2>
-  <p class="card-subtitle">Estavam com o ASO vencido no momento do cruzamento — contam pra meta da campanha.</p>
-  {% if convocados %}
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>ID</th><th>Nome</th></tr></thead>
-      <tbody>
-        {% for c in convocados %}<tr><td>{{ c.funcionario_id }}</td><td>{{ c.nome }}</td></tr>{% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty-state">Nenhum convocado — todo mundo da lista já estava com o ASO em dia.</div>
-  {% endif %}
-
-  <h2 style="margin-top:22px">Já Dispensados</h2>
-  <p class="card-subtitle">A lista do RH trouxe, mas o sistema barrou por já estarem com o ASO em dia — não contam pra meta.</p>
-  {% if ja_dispensados %}
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>ID</th><th>Nome</th></tr></thead>
-      <tbody>
-        {% for c in ja_dispensados %}<tr><td>{{ c.funcionario_id }}</td><td>{{ c.nome }}</td></tr>{% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty-state">Ninguém foi barrado — todo mundo da lista estava vencido.</div>
-  {% endif %}
+  {% call m.accordion('painel-ja-dispensados-rh', 'Já dispensados (barrados da meta)', ja_dispensados|length, accent='accent-success', vazio_texto='Ninguém foi barrado — todo mundo da lista estava vencido.') %}
+  <table>
+    <thead><tr><th>ID</th><th>Nome</th></tr></thead>
+    <tbody>
+      {% for c in ja_dispensados %}<tr><td>{{ c.funcionario_id }}</td><td>{{ c.nome }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% endcall %}
   {% endif %}
 </div>
 
@@ -129,7 +146,8 @@
   <p class="card-subtitle">
     Aceita tanto uma lista simples de presença (só quem foi) quanto uma planilha com todo mundo e
     uma coluna de data por pessoa (data real ou "Pendente") — o sistema lê o valor de cada linha,
-    nunca assume que aparecer na planilha significa ter feito o exame.
+    nunca assume que aparecer na planilha significa ter feito o exame. Cruza sempre pelo ID/matrícula
+    primeiro, então funciona mesmo pra quem não é desta filial.
   </p>
   <form method="post" action="{{ url_for('campanha_processar_dia', campanha_id=campanha.id) }}" enctype="multipart/form-data">
     <div class="field-row">
@@ -154,97 +172,102 @@
   <h2>Resultado — {{ relatorio.data_relatorio | data_br }}</h2>
   <div class="stats-row">
     <div class="stat-tile"><div class="stat-value">{{ relatorio.fizeram|length }}</div><div class="stat-label">Fizeram o exame</div></div>
-    <div class="stat-tile"><div class="stat-value" style="color:var(--warning)">{{ relatorio.ainda_pendentes|length }}</div><div class="stat-label">Ainda pendentes (na planilha)</div></div>
+    <div class="stat-tile"><div class="stat-value" style="color:var(--warning)">{{ relatorio.ainda_pendentes|length }}</div><div class="stat-label">Aguardando confirmação</div></div>
     <div class="stat-tile"><div class="stat-value">{{ relatorio.faltaram|length }}</div><div class="stat-label">Faltaram (agendados)</div></div>
     <div class="stat-tile"><div class="stat-value">{{ relatorio.inconsistencias|length }}</div><div class="stat-label">Inconsistências</div></div>
   </div>
 
-  {% if relatorio.fizeram %}
-  <h2>Fizeram</h2>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>ID</th><th>Nome</th><th>Data realização</th></tr></thead>
-      <tbody>
-        {% for f in relatorio.fizeram %}<tr><td>{{ f.funcionario_id }}</td><td>{{ f.nome }}</td><td>{{ f.data_realizacao | data_br }}</td></tr>{% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
+  {% call m.accordion('painel-resultado-fizeram', 'Fizeram o exame', relatorio.fizeram|length, accent='accent-success') %}
+  <table>
+    <thead><tr><th>ID</th><th>Nome</th><th>Data realização</th></tr></thead>
+    <tbody>
+      {% for f in relatorio.fizeram %}<tr><td>{{ f.funcionario_id }}</td><td>{{ f.nome }}</td><td>{{ f.data_realizacao | data_br }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% endcall %}
 
-  {% if relatorio.ainda_pendentes %}
-  <h2>Ainda pendentes (na planilha)</h2>
-  <p class="card-subtitle">Estavam na planilha, mas a coluna de data dizia "Pendente" — nenhuma baixa foi aplicada.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>ID</th><th>Nome</th></tr></thead>
-      <tbody>
-        {% for p in relatorio.ainda_pendentes %}<tr><td>{{ p.funcionario_id }}</td><td>{{ p.nome }}</td></tr>{% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
+  {% call m.accordion('painel-resultado-pendentes', 'Aguardando confirmação (nesta planilha)', relatorio.ainda_pendentes|length, accent='accent-warning', vazio_texto='Ninguém ficou pendente nesta planilha.') %}
+  <p class="card-subtitle" style="margin-top:0">Estavam na planilha, mas a coluna de data dizia "Pendente" — nenhuma baixa foi aplicada.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Nome</th></tr></thead>
+    <tbody>
+      {% for p in relatorio.ainda_pendentes %}<tr><td>{{ p.funcionario_id }}</td><td>{{ p.nome }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% endcall %}
 
   {% if relatorio.inconsistencias %}
-  <h2>Inconsistências</h2>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Motivo</th><th>Detalhe</th></tr></thead>
-      <tbody>
-        {% for i in relatorio.inconsistencias %}<tr><td><span class="badge badge-danger">{{ i.motivo }}</span></td><td>{{ i.detalhe }}</td></tr>{% endfor %}
-      </tbody>
-    </table>
-  </div>
+  {% call m.accordion('painel-resultado-inconsistencias', 'Inconsistências', relatorio.inconsistencias|length, accent='accent-warning', aberto=True) %}
+  <table>
+    <thead><tr><th>Motivo</th><th>Detalhe</th></tr></thead>
+    <tbody>
+      {% for i in relatorio.inconsistencias %}<tr><td><span class="badge badge-danger">{{ i.motivo }}</span></td><td>{{ i.detalhe }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  {% endcall %}
   {% endif %}
 </div>
 {% endif %}
 
-<div class="card">
-  <h2>Quem ainda precisa fazer o exame ({{ pendentes|length }})</h2>
-  {% if pendentes %}
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Último ASO</th></tr></thead>
-      <tbody>
-        {% for p in pendentes %}<tr><td>{{ p.id }}</td><td>{{ p.nome }}</td><td>{{ p.funcao or '—' }}</td><td>{{ p.data_ultimo_aso | data_br }}</td></tr>{% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty-state">Todo mundo desta campanha já concluiu.</div>
-  {% endif %}
-</div>
+{% call m.accordion('painel-pendentes', 'Pendentes da campanha', pendentes|length, accent='accent-warning', vazio_texto='Todo mundo desta campanha já concluiu.') %}
+<table>
+  <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Último ASO</th></tr></thead>
+  <tbody>
+    {% for p in pendentes %}<tr><td>{{ p.id }}</td><td>{{ p.nome }}</td><td>{{ p.funcao or '—' }}</td><td>{{ p.data_ultimo_aso | data_br }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endcall %}
 
-<div class="card">
-  <h2>Fizeram o exame aqui ({{ fizeram_membros|length }})</h2>
-  <p class="card-subtitle">Convocados que realmente compareceram nesta campanha e receberam baixa.</p>
-  {% if fizeram_membros %}
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Data de comparecimento</th></tr></thead>
-      <tbody>
-        {% for f in fizeram_membros %}<tr><td>{{ f.id }}</td><td>{{ f.nome }}</td><td>{{ f.funcao or '—' }}</td><td>{{ f.data_atendimento | data_br }}</td></tr>{% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty-state">Ninguém compareceu ainda.</div>
-  {% endif %}
-</div>
+{% call m.accordion('painel-fizeram', 'Compareceram nesta campanha', fizeram_membros|length, accent='accent-success', vazio_texto='Ninguém compareceu ainda.') %}
+<table>
+  <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Data de comparecimento</th></tr></thead>
+  <tbody>
+    {% for f in fizeram_membros %}<tr><td>{{ f.id }}</td><td>{{ f.nome }}</td><td>{{ f.funcao or '—' }}</td><td>{{ f.data_atendimento | data_br }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endcall %}
 
-<div class="card">
-  <h2>Não precisaram fazer exame ({{ nao_precisou_membros|length }})</h2>
-  <p class="card-subtitle">Estavam convocados (vencidos no cruzamento da lista do RH), mas o ASO já ficou em dia por outro motivo — nunca compareceram a esta campanha.</p>
-  {% if nao_precisou_membros %}
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Último ASO</th></tr></thead>
-      <tbody>
-        {% for n in nao_precisou_membros %}<tr><td>{{ n.id }}</td><td>{{ n.nome }}</td><td>{{ n.funcao or '—' }}</td><td>{{ n.data_ultimo_aso | data_br }}</td></tr>{% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty-state">Nenhum caso — todo "Dispensado" aqui veio de comparecimento real.</div>
-  {% endif %}
-</div>
+{% call m.accordion('painel-nao-precisou', 'Já estavam em dia (sem comparecer aqui)', nao_precisou_membros|length, accent='accent-info', vazio_texto='Nenhum caso — todo "Dispensado" aqui veio de comparecimento real.') %}
+<p class="card-subtitle" style="margin-top:0">Estavam na meta (vencidos no cruzamento), mas o ASO já ficou em dia por outro motivo — nunca compareceram a esta campanha.</p>
+<table>
+  <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Último ASO</th></tr></thead>
+  <tbody>
+    {% for n in nao_precisou_membros %}<tr><td>{{ n.id }}</td><td>{{ n.nome }}</td><td>{{ n.funcao or '—' }}</td><td>{{ n.data_ultimo_aso | data_br }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+
+{% if fora_do_local_membros %}
+{% call m.accordion('painel-fora-do-local', 'De outra filial, fizeram aqui', fora_do_local_membros|length, accent='accent-info') %}
+<p class="card-subtitle" style="margin-top:0">Não fazem parte da meta de {{ campanha.local_trabalho }}, mas já foram atualizados normalmente na base mestre (cruzamento sempre pelo ID).</p>
+<table>
+  <thead><tr><th>ID</th><th>Nome</th><th>Local de trabalho real</th><th>Data de comparecimento</th></tr></thead>
+  <tbody>
+    {% for f in fora_do_local_membros %}<tr><td>{{ f.id }}</td><td>{{ f.nome }}</td><td>{{ f.local_trabalho or '—' }}</td><td>{{ f.data_atendimento | data_br }}</td></tr>{% endfor %}
+  </tbody>
+</table>
+{% endcall %}
+{% endif %}
+
+<script>
+function abrirEDestacar(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  if ('open' in el) el.open = true;
+  el.scrollIntoView({behavior: 'smooth', block: 'start'});
+  el.classList.remove('destaque-temporario');
+  void el.offsetWidth;
+  el.classList.add('destaque-temporario');
+}
+document.querySelectorAll('.stat-tile-link[data-target]').forEach(function (link) {
+  link.addEventListener('click', function (e) {
+    e.preventDefault();
+    abrirEDestacar(link.dataset.target);
+    history.replaceState(null, '', '#' + link.dataset.target);
+  });
+});
+if (window.location.hash) {
+  abrirEDestacar(window.location.hash.substring(1));
+}
+</script>
 {% endblock %}

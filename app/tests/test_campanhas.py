@@ -161,6 +161,59 @@ class TestDashboardPorCampanha:
         assert fizeram[0]["data_atendimento"] == "2026-09-04"
 
 
+class TestTotalFuncionariosFilialEForaDoLocal:
+    def test_total_funcionarios_filial_conta_todo_mundo_do_local_nao_so_a_meta(self, duas_pessoas):
+        """Joao (vencido) e Maria (dispensado) são os 2 de Brasília — o total
+        da filial conta os dois, mesmo que só Joao vire meta da campanha."""
+        campanha_id = campanhas.criar_campanha(
+            duas_pessoas, "Brasilia", date(2026, 9, 2), date(2026, 9, 4), kits_enviados=False
+        )
+        campanhas.registrar_resultado_lista_rh(
+            duas_pessoas, campanha_id, "rh.xlsx",
+            convocados=[{"funcionario_id": "1", "nome": "Joao"}], ja_dispensados=[],
+        )
+        c = campanhas.obter_campanha(duas_pessoas, campanha_id)
+        assert c.total_funcionarios_filial == 2
+        assert c.total_membros == 1
+
+    def test_pessoa_de_outra_filial_conta_como_fora_do_local(self, duas_pessoas):
+        """Cenário real: alguém lotado em São Paulo fez o exame na campanha
+        de Brasília. Deve aparecer separado, sem contar pra meta de
+        Brasília, mas o comparecimento é registrado normalmente."""
+        duas_pessoas.execute(
+            """INSERT INTO funcionarios (id, nome, nome_normalizado, local_trabalho, status_aso)
+               VALUES ('3', 'Pedro SP', 'PEDRO SP', 'Sao Paulo', 'Precisa fazer exame')"""
+        )
+        duas_pessoas.commit()
+        campanha_id = campanhas.criar_campanha(
+            duas_pessoas, "Brasilia", date(2026, 9, 2), date(2026, 9, 4), kits_enviados=False
+        )
+        campanhas.registrar_resultado_lista_rh(
+            duas_pessoas, campanha_id, "rh.xlsx",
+            convocados=[{"funcionario_id": "1", "nome": "Joao"}], ja_dispensados=[],
+        )
+        # Pedro (SP) compareceu fisicamente na campanha de Brasilia
+        duas_pessoas.execute(
+            """INSERT INTO campanha_atendimentos (campanha_id, funcionario_id, data_atendimento, criado_em)
+               VALUES (?, '3', '2026-09-02', '2026-09-02T10:00:00')""",
+            (campanha_id,),
+        )
+        duas_pessoas.commit()
+
+        c = campanhas.obter_campanha(duas_pessoas, campanha_id)
+        assert c.fora_do_local == 1
+        assert c.total_membros == 1  # Pedro nao entra na meta de Brasilia
+        assert c.fizeram == 0        # Joao (o membro real) nao compareceu ainda
+        assert c.fizeram_total == 1  # mas fisicamente 1 pessoa foi atendida ali
+
+        fora = campanhas.listar_membros_fora_do_local(duas_pessoas, campanha_id)
+        assert [f["id"] for f in fora] == ["3"]
+
+        # listar_membros_fizeram (so membros) nao deve incluir o Pedro
+        fizeram = campanhas.listar_membros_fizeram(duas_pessoas, campanha_id)
+        assert fizeram == []
+
+
 class TestCronogramaDias:
     def test_seed_dias_cria_dois_dias_para_brasilia(self, conn):
         campanhas.seed_campanhas_oficiais(conn)

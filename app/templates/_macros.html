@@ -1,0 +1,20 @@
+{% macro accordion(id, titulo, contagem, accent='', vazio_texto='Nenhum registro.', aberto=False) %}
+<details class="accordion {{ accent }}" id="{{ id }}" {{ 'open' if aberto else '' }}>
+  <summary>
+    {{ titulo }}
+    <span class="accordion-count">{{ contagem }}</span>
+    <span class="accordion-chevron">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </span>
+  </summary>
+  <div class="accordion-body">
+    {% if contagem %}
+    <div class="table-scroll">
+      {{ caller() }}
+    </div>
+    {% else %}
+    <div class="empty-state">{{ vazio_texto }}</div>
+    {% endif %}
+  </div>
+</details>
+{% endmacro %}

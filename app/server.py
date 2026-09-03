@@ -248,6 +248,7 @@ def campanha_detalhe(campanha_id):
     concluidos = campanhas_mod.listar_membros_concluidos(conn, campanha_id)
     fizeram_membros = campanhas_mod.listar_membros_fizeram(conn, campanha_id)
     nao_precisou_membros = campanhas_mod.listar_membros_nao_precisou(conn, campanha_id)
+    fora_do_local_membros = campanhas_mod.listar_membros_fora_do_local(conn, campanha_id)
     dias = campanhas_mod.listar_dias_campanha(conn, campanha_id)
     convocados, ja_dispensados = campanhas_mod.obter_resultado_lista_rh(conn, campanha_id)
     conn.close()
@@ -259,6 +260,7 @@ def campanha_detalhe(campanha_id):
         concluidos=concluidos,
         fizeram_membros=fizeram_membros,
         nao_precisou_membros=nao_precisou_membros,
+        fora_do_local_membros=fora_do_local_membros,
         dias=dias,
         convocados=convocados,
         ja_dispensados=ja_dispensados,
@@ -398,6 +400,7 @@ def campanha_processar_dia(campanha_id):
     concluidos = campanhas_mod.listar_membros_concluidos(conn, campanha_id)
     fizeram_membros = campanhas_mod.listar_membros_fizeram(conn, campanha_id)
     nao_precisou_membros = campanhas_mod.listar_membros_nao_precisou(conn, campanha_id)
+    fora_do_local_membros = campanhas_mod.listar_membros_fora_do_local(conn, campanha_id)
     dias = campanhas_mod.listar_dias_campanha(conn, campanha_id)
     convocados, ja_dispensados = campanhas_mod.obter_resultado_lista_rh(conn, campanha_id)
     conn.close()
@@ -423,6 +426,7 @@ def campanha_processar_dia(campanha_id):
         concluidos=concluidos,
         fizeram_membros=fizeram_membros,
         nao_precisou_membros=nao_precisou_membros,
+        fora_do_local_membros=fora_do_local_membros,
         dias=dias,
         convocados=convocados,
         ja_dispensados=ja_dispensados,
