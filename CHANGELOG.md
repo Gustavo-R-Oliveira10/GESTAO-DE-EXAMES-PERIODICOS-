@@ -2,6 +2,61 @@
 
 Histórico das alterações do projeto, em ordem cronológica.
 
+## 2026-09-03 — Correção crítica de datas, base mestre real, testes automatizados, Git
+
+Branch `atualizar-base-mestra-e-backup`, mesclada em `main`.
+
+- **Bug crítico real, achado testando ANTES de aplicar em produção**: o fix de
+  `parse_data` do dia anterior só cobria data ISO pura (`"2026-09-02"`); o
+  mesmo bug (`pd.to_datetime(dayfirst=True)` trocando dia/mês quando o dia é
+  ≤12) continuava acontecendo pra ISO **com hora junto**
+  (`"2026-02-09 00:00:00"`) — formato real que o pandas gera ao ler uma
+  célula de data do Excel forçando `dtype=str`. Corrigido generalizando o
+  regex de detecção ISO pra aceitar hora opcional.
+- **Correção única e completa das datas de produção**: como nenhuma baixa
+  diária real tinha sido processada ainda (confirmado checando
+  `importacoes_rh` e o log — só existiam criação de campanha e importação de
+  lista do RH, que não grava `data_ultimo_aso`), foi seguro ressincronizar
+  **todas** as datas do banco real a partir do arquivo mestre corrigido, sem
+  a proteção "nunca regride" (que, nesse caso, poderia *manter* uma data já
+  corrompida em vez de corrigi-la, já que a troca dia/mês nem sempre empurra
+  a data pra frente). Backup manual do `periodicos.db` feito antes, além do
+  backup automático do Excel. **Resultado real: 17 pessoas estavam
+  erradamente marcadas como "Dispensado" e voltaram para "Precisa fazer
+  exame"** depois da correção — o bug tinha efeito prático real na campanha,
+  não só teórico.
+- **`CAMINHO_BASE_MESTRE_FIXA` corrigido**: apontava pro arquivo placeholder
+  sintético (`app/data/base_mestra_2026.xlsx`, criado só pra testes) — agora
+  aponta pro arquivo real que o usuário mantém e edita
+  (`PERIODICOS - BASE MESTRA.xlsx`, raiz do projeto). O app nunca escreve
+  nesse arquivo, só lê.
+- **Backup automático com data/hora**: toda leitura do arquivo mestre (carga
+  inicial ou recarga manual) salva uma cópia em
+  `app/data/backups_base_mestra/` antes de processar — pedido do usuário
+  para nunca perder uma edição manual feita a mão. Timestamp em milissegundos
+  depois que um teste pegou duas recargas no mesmo segundo se sobrescrevendo.
+  Dashboard passou a listar os últimos backups.
+- **Suite de testes automatizados (pytest, TDD)**: 56 testes cobrindo
+  `planilhas.py` (parse de data incluindo as duas variantes do bug acima,
+  mapeamento de coluna com acento, validação de cabeçalho), `rules.py`
+  (regra de corte), `matching.py` (pipeline de 5 camadas), `importacao_base.py`
+  (backup, não-regressão, reconciliação de local_trabalho, nunca escreve no
+  arquivo original) e `campanhas.py` (sem snapshot automático, classificação
+  convocado/já-dispensado, trava, seed idempotente e não-destrutivo).
+  `tests/conftest.py` isola banco/log/backups em diretório temporário
+  automaticamente (fixture `autouse`) — proteção estrutural contra o tipo de
+  vazamento de dado de teste que já aconteceu antes nesta sessão.
+- **Backfill retroativo da campanha de Brasília**: o usuário já tinha criado
+  a campanha e importado a lista do RH (72 pessoas) no dia anterior, antes da
+  trava de upload único existir. Preenchido manualmente
+  `lista_rh_processada_em`/`lista_rh_arquivo` com os dados reais do
+  `importacoes_rh` histórico, e os 72 membros existentes marcados como
+  "convocados" em `campanha_rh_resultado` — evita que a tela peça pra
+  reenviar a lista do RH. Aproximação de histórico (o fluxo antigo não
+  distinguia convocado de já-dispensado), documentado como tal.
+- **Git**: primeiro uso do fluxo branch → commit → push → merge → apaga
+  branch, documentado em `GIT_WORKFLOW.md`.
+
 ## 2026-09-02 — Matemática da campanha, trava de upload único, seed do cronograma
 
 - **Correção de matemática**: a meta (denominador do progresso %) deixou de

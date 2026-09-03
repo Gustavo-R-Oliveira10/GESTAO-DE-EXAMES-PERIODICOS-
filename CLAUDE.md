@@ -38,6 +38,31 @@ em segundo plano (sem janela de terminal) e abre numa janela própria do Edge
 criar um atalho na área de trabalho: botão direito no `.vbs` → Enviar para →
 Área de trabalho (criar atalho).
 
+## Base mestre real (correção 2026-09-03)
+
+`app/importacao_base.CAMINHO_BASE_MESTRE_FIXA` aponta para
+`PERIODICOS - BASE MESTRA.xlsx` na **raiz do projeto** (não `app/data/`) —
+é o arquivo que o usuário mantém e edita manualmente no Excel (ex: corrigir
+o local de trabalho de alguém). O app nunca escreve nele, só lê. Toda leitura
+(carga inicial ou "Recarregar base do arquivo" no Dashboard) salva uma cópia
+com data/hora em `app/data/backups_base_mestra/` antes de processar — nunca
+apagada automaticamente, serve de ponto de recuperação.
+
+**Cuidado com parsing de data**: `planilhas.parse_data()` já corrigiu duas
+vezes o mesmo bug (`pd.to_datetime(dayfirst=True)` trocando dia/mês quando o
+dia é ≤12) — primeiro para ISO puro (`"2026-09-02"`), depois para ISO com
+hora (`"2026-02-09 00:00:00"`, formato real que vem do Excel). Se aparecer
+uma data suspeita de novo, comece verificando esse ponto antes de qualquer
+outra hipótese. Há testes de regressão específicos em
+`app/tests/test_planilhas.py`.
+
+## Testes
+
+`app/tests/` (pytest, 56 testes). Rodar com `cd app && python -m pytest
+tests/ -v`. `conftest.py` tem uma fixture `autouse` que isola banco, log e
+pasta de backups num diretório temporário em **todo** teste automaticamente
+— nunca precisa (nem deve) apontar manualmente pro banco real num teste.
+
 ## Git
 
 Repositório: https://github.com/Gustavo-R-Oliveira10/GESTAO-DE-EXAMES-PERIODICOS-.
@@ -168,14 +193,9 @@ de cada recarga se aparecer um local nunca visto antes.
    como módulo isolado; o conceito de fila (`status_fila`) existe no schema
    mas hoje só é setado via baixa diária dentro de uma campanha.
 
-## Testes
+## Histórico de validação
 
-Não há suite de testes formal (pytest). Validação feita via scripts ad-hoc no
-terminal (dados sintéticos) e subindo o servidor Flask local. **Cuidado ao
-testar:** o banco real (`app/data/periodicos.db`) já tem ~1.294 funcionários
-reais — sempre isolar `db.DB_PATH` (e `importacao_base.CAMINHO_BASE_MESTRE_FIXA`,
-`logs.CAMINHO_LOG`) para um diretório temporário antes de rodar testes que
-escrevem no banco, pra não arriscar os dados de produção. Ver `CHANGELOG.md`
-para o que foi validado em cada etapa (inclui dois bugs reais encontrados e
-corrigidos durante os testes: agrupamento de PDF colando pessoas diferentes, e
-`parse_data` corrompendo datas ISO).
+Ver `CHANGELOG.md` para o que foi validado em cada etapa e os bugs reais
+encontrados e corrigidos ao longo do desenvolvimento (agrupamento de PDF
+colando pessoas diferentes, `parse_data` corrompendo datas ISO em duas
+variantes, backup colidindo no mesmo segundo, entre outros).
