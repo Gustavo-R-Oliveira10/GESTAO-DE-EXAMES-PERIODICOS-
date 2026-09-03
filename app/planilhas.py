@@ -9,7 +9,10 @@ from datetime import date, datetime
 import pandas as pd
 
 
-_RE_DATA_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# YYYY-MM-DD, opcionalmente seguido de hora (ex: "2026-02-09 00:00:00" — é
+# assim que o pandas serializa uma célula de data do Excel quando forçamos
+# dtype=str). O grupo captura só a parte da data.
+_RE_DATA_ISO = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:[ T]\d{2}:\d{2}:\d{2})?$")
 
 
 def parse_data(valor) -> date | None:
@@ -22,13 +25,17 @@ def parse_data(valor) -> date | None:
     texto = str(valor).strip()
     if not texto or texto.lower() == "nan":
         return None
-    if _RE_DATA_ISO.match(texto):
-        # já está em ISO (YYYY-MM-DD) — normalmente uma data que o próprio
-        # sistema gravou antes. Não usar dayfirst aqui: com dayfirst=True o
-        # pandas pode reinterpretar ISO como YYYY-DD-MM quando o "dia" é <=12
-        # (ex: "2026-09-02" virava 09/02 = fevereiro em vez de setembro).
+    m_iso = _RE_DATA_ISO.match(texto)
+    if m_iso:
+        # já está em ISO (YYYY-MM-DD, com ou sem hora) — normalmente uma data
+        # que o próprio sistema gravou antes, ou uma célula de data do Excel
+        # serializada pelo pandas como string. Não usar dayfirst aqui: com
+        # dayfirst=True o pandas pode reinterpretar ISO como YYYY-DD-MM quando
+        # o "dia" é <=12 (ex: "2026-09-02" virava 09/02 = fevereiro em vez de
+        # setembro; "2026-02-09 00:00:00" virava 02/09 = setembro em vez de
+        # fevereiro — mesmo bug, só que só aparecia com hora junto).
         try:
-            return date.fromisoformat(texto)
+            return date.fromisoformat(m_iso.group(1))
         except ValueError:
             return None
     if texto.replace(".", "", 1).isdigit():

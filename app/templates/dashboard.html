@@ -68,13 +68,31 @@
 <div class="card">
   <h2>Base mestre fixa</h2>
   <p class="card-subtitle">
-    Arquivo: <code>{{ caminho_base }}</code>. A leitura inicial só acontece uma vez
-    (banco vazio). Use o botão abaixo quando o RH atualizar o arquivo — cadastro é
-    atualizado, mas o progresso de exames já processado nunca é apagado.
+    Arquivo: <code>{{ caminho_base }}</code>. O app nunca escreve nesse arquivo — só lê.
+    A leitura inicial só acontece uma vez (banco vazio). Use o botão abaixo quando você
+    corrigir algo no arquivo (ex: local de trabalho errado) — cadastro é atualizado, mas
+    o progresso de exames já processado nunca é apagado. Toda leitura salva uma cópia com
+    data/hora automaticamente, como ponto de recuperação.
   </p>
   <form method="post" action="{{ url_for('dashboard_recarregar') }}">
     <button class="btn btn-secondary" type="submit">Recarregar base do arquivo</button>
   </form>
+
+  {% if backups %}
+  <hr class="divider">
+  <h2 style="font-size:14px">Últimos backups (pontos de recuperação)</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Arquivo</th><th>Tamanho</th></tr></thead>
+      <tbody>
+        {% for b in backups %}<tr><td>{{ b.nome }}</td><td>{{ b.tamanho_kb }} KB</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="text-muted" style="font-size:12px; margin:8px 0 0 0">
+    Ficam salvos em <code>app/data/backups_base_mestra/</code> — nunca apagados automaticamente.
+  </p>
+  {% endif %}
 </div>
 
 {% endif %}

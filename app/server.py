@@ -25,6 +25,7 @@ from db import get_connection, init_db
 from matching import cruzar_lista_rh
 from importacao_base import (
     CAMINHO_BASE_MESTRE_FIXA,
+    PASTA_BACKUPS_BASE_MESTRA,
     base_mestre_fixa_existe,
     carregar_base_mestre_se_vazia,
     recarregar_base_mestre,
@@ -122,6 +123,11 @@ def dashboard():
         for r in progresso_local
     ]
 
+    backups = []
+    if PASTA_BACKUPS_BASE_MESTRA.exists():
+        arquivos = sorted(PASTA_BACKUPS_BASE_MESTRA.glob("*.xlsx"), key=lambda p: p.stat().st_mtime, reverse=True)
+        backups = [{"nome": p.name, "tamanho_kb": round(p.stat().st_size / 1024)} for p in arquivos[:15]]
+
     return render_template(
         "dashboard.html",
         active="dashboard",
@@ -129,6 +135,7 @@ def dashboard():
         caminho_base=str(CAMINHO_BASE_MESTRE_FIXA),
         totais=totais,
         progresso=progresso,
+        backups=backups,
     )
 
 
@@ -138,7 +145,8 @@ def dashboard_recarregar():
     try:
         resultado = recarregar_base_mestre(conn)
         flash(
-            f"Base recarregada: {resultado['novos']} novo(s), {resultado['atualizados']} atualizado(s).",
+            f"Base recarregada: {resultado['novos']} novo(s), {resultado['atualizados']} atualizado(s). "
+            f"Backup salvo: {resultado['backup']}",
             "success",
         )
     except FileNotFoundError as e:
