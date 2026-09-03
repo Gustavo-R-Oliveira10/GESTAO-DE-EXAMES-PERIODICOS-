@@ -94,11 +94,20 @@ def index():
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
     conn = get_connection()
+    # "Dispensado" mistura duas populações bem diferentes: quem realmente fez
+    # o exame numa campanha (tem registro em campanha_atendimentos, de
+    # qualquer campanha) e quem nunca precisou vir a lugar nenhum (ASO já
+    # estava em dia antes de qualquer campanha existir). Separado aqui do
+    # mesmo jeito que já fizemos no dashboard de cada campanha.
     totais = conn.execute(
         """
         SELECT COUNT(*) AS total,
                SUM(CASE WHEN status_aso = 'Dispensado' THEN 1 ELSE 0 END) AS dispensados,
-               SUM(CASE WHEN status_aso != 'Dispensado' THEN 1 ELSE 0 END) AS precisam_exame
+               SUM(CASE WHEN status_aso != 'Dispensado' THEN 1 ELSE 0 END) AS precisam_exame,
+               SUM(CASE WHEN status_aso = 'Dispensado' AND id IN (SELECT DISTINCT funcionario_id FROM campanha_atendimentos)
+                   THEN 1 ELSE 0 END) AS fizeram_exame,
+               SUM(CASE WHEN status_aso = 'Dispensado' AND id NOT IN (SELECT DISTINCT funcionario_id FROM campanha_atendimentos)
+                   THEN 1 ELSE 0 END) AS ja_estavam_em_dia
         FROM funcionarios
         """
     ).fetchone()
@@ -106,7 +115,9 @@ def dashboard():
         """
         SELECT local_trabalho,
                COUNT(*) AS total,
-               SUM(CASE WHEN status_aso = 'Dispensado' THEN 1 ELSE 0 END) AS dispensados
+               SUM(CASE WHEN status_aso = 'Dispensado' THEN 1 ELSE 0 END) AS dispensados,
+               SUM(CASE WHEN status_aso = 'Dispensado' AND id IN (SELECT DISTINCT funcionario_id FROM campanha_atendimentos)
+                   THEN 1 ELSE 0 END) AS fizeram_exame
         FROM funcionarios
         GROUP BY local_trabalho
         ORDER BY local_trabalho
@@ -119,6 +130,7 @@ def dashboard():
             "local_trabalho": r["local_trabalho"] or "(sem local)",
             "total": r["total"],
             "dispensados": r["dispensados"],
+            "fizeram_exame": r["fizeram_exame"] or 0,
             "percentual": round((r["dispensados"] or 0) / r["total"] * 100, 1) if r["total"] else 0,
         }
         for r in progresso_local

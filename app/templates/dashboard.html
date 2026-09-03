@@ -31,8 +31,17 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
       </span>
     </div>
-    <div class="stat-value" style="color: var(--success)">{{ totais.dispensados or 0 }}</div>
-    <div class="stat-label">Dispensados (ASO de maio em diante)</div>
+    <div class="stat-value" style="color: var(--success)">{{ totais.fizeram_exame or 0 }}</div>
+    <div class="stat-label">Fizeram o exame (em alguma campanha)</div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-head">
+      <span class="stat-icon icon-info">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      </span>
+    </div>
+    <div class="stat-value" style="color: var(--accent-blue)">{{ totais.ja_estavam_em_dia or 0 }}</div>
+    <div class="stat-label">Já estavam em dia (nunca precisaram)</div>
   </div>
   <div class="stat-tile">
     <div class="stat-head">
@@ -44,6 +53,11 @@
     <div class="stat-label">Precisam de exame / vencidos</div>
   </div>
 </div>
+<p class="text-muted" style="font-size:12.5px; margin:-10px 0 20px 0">
+  "Dispensado" ({{ totais.dispensados or 0 }} no total) é a soma de duas coisas bem diferentes:
+  quem <strong>fez o exame de verdade</strong> numa campanha e quem <strong>nunca precisou vir</strong>
+  a lugar nenhum porque o ASO já estava em dia antes de qualquer campanha existir.
+</p>
 
 <div class="card">
   <h2>Meta de conclusão por local de trabalho</h2>
@@ -53,7 +67,10 @@
     <div style="margin-bottom:16px">
       <div class="progress-meta">
         <strong>{{ p.local_trabalho }}</strong>
-        <span class="text-muted">{{ p.dispensados }}/{{ p.total }} · {{ p.percentual }}%</span>
+        <span class="text-muted">
+          {{ p.dispensados }}/{{ p.total }} · {{ p.percentual }}%
+          <span style="color:var(--success)">({{ p.fizeram_exame }} fizeram)</span>
+        </span>
       </div>
       <div class="progress-track">
         <div class="progress-fill" style="width:{{ p.percentual }}%"></div>
