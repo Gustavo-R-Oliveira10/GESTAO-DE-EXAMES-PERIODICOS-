@@ -2,6 +2,33 @@
 
 Histórico das alterações do projeto, em ordem cronológica.
 
+## 2026-09-03 (3) — Dashboard por campanha: Fizeram / Não precisaram / Pendentes
+
+Branch `dashboard-campanha-por-dia`, mesclada em `main`.
+
+- **Pedido do usuário**: "Concluído" misturava duas coisas — quem realmente
+  compareceu na campanha e quem já estava com o ASO em dia por outro motivo
+  (recarga da base com um exame feito fora, por exemplo). Separado em quatro
+  métricas por campanha: **Convocados** (meta), **Fizeram o exame aqui**
+  (comparecimento real, rastreado), **Não precisaram** (Dispensado sem nunca
+  ter comparecido a esta campanha) e **Ainda pendentes**.
+- Nova tabela `campanha_atendimentos`: grava quem compareceu e em que dia,
+  toda vez que `baixa_diaria.py` aplica uma baixa real dentro do contexto de
+  uma campanha (`campanha_id` informado). É o que permite diferenciar
+  comparecimento real de "ficou em dia por outro canal".
+- **Cronograma por dia** (não só o período todo): nova tabela `campanha_dias`
+  + `seed_dias_campanhas_oficiais()`, casando por `local_trabalho` — funciona
+  tanto pra campanha criada pelo seed quanto pra uma manual (a Brasília real
+  do usuário). Horário de Brasília ajustado conforme confirmado: 02/09
+  09h-18h, **04/09 09h-14h** (não 18h como o texto genérico inicial dizia).
+  Dashboard da campanha ganhou a tabela "Atendimento por dia", com quantos
+  compareceram em cada dia específico do cronograma.
+- 15 novos testes cobrindo classificação fizeram/não-precisou/pendente e
+  contagem por dia — suite total agora com 71 testes.
+- Validado local: dashboard da Brasília real mostrou 72 convocados / 0
+  fizeram / 7 não precisaram / 65 pendentes (consistente com o estado após a
+  reversão da baixa incorreta) e os dois dias com os horários certos.
+
 ## 2026-09-03 (2) — Baixa diária tratava "apareceu na planilha" como "fez o exame"
 
 Branch `fix-baixa-nao-considera-pendente`, mesclada em `main`.
