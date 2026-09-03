@@ -10,11 +10,17 @@
 </div>
 
 <div class="stats-row">
-  <div class="stat-tile"><div class="stat-value">{{ campanha.total_membros }}</div><div class="stat-label">Convocados (ASO vencido)</div></div>
+  <div class="stat-tile"><div class="stat-value">{{ campanha.total_membros }}</div><div class="stat-label">Convocados (meta desta campanha)</div></div>
   <div class="stat-tile"><div class="stat-value" style="color:var(--success)">{{ campanha.fizeram }}</div><div class="stat-label">Fizeram o exame aqui</div></div>
   <div class="stat-tile"><div class="stat-value" style="color:var(--accent-blue)">{{ campanha.nao_precisou }}</div><div class="stat-label">Não precisaram (ASO já em dia)</div></div>
   <div class="stat-tile"><div class="stat-value" style="color:var(--warning)">{{ campanha.pendentes }}</div><div class="stat-label">Ainda pendentes</div></div>
 </div>
+<p class="text-muted" style="font-size:12.5px; margin:-10px 0 20px 0">
+  "Convocados" é a foto de quem estava com o ASO vencido no momento em que a lista do RH foi cruzada
+  — é a meta fixa da campanha. Não significa que os {{ campanha.total_membros }} continuam vencidos
+  hoje: os {{ campanha.nao_precisou }} "Não precisaram" já viraram vigentes por fora; só os
+  {{ campanha.pendentes }} "Ainda pendentes" estão vencidos agora, de verdade.
+</p>
 
 <div class="card">
   <div class="progress-meta">
@@ -82,7 +88,7 @@
   </div>
 
   <div class="stats-row">
-    <div class="stat-tile"><div class="stat-value">{{ convocados|length }}</div><div class="stat-label">Convocados (ASO vencido)</div></div>
+    <div class="stat-tile"><div class="stat-value">{{ convocados|length }}</div><div class="stat-label">Convocados (vencidos no cruzamento)</div></div>
     <div class="stat-tile"><div class="stat-value" style="color:var(--success)">{{ ja_dispensados|length }}</div><div class="stat-label">Já dispensados (barrados da meta)</div></div>
   </div>
 
