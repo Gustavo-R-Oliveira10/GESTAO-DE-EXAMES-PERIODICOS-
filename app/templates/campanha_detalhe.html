@@ -22,6 +22,11 @@
     <span class="stat-tile-note text-muted">Todos precisam participar</span>
     {% endif %}
   </div>
+  <div class="stat-tile">
+    <div class="stat-value" style="color:var(--accent-blue)">{{ campanha.precisam_exame }}</div>
+    <div class="stat-label">Meta da Campanha</div>
+    <span class="stat-tile-note text-muted">Convocados que ainda precisam (ou precisaram) vir</span>
+  </div>
   <a class="stat-tile-link" href="#painel-fizeram" data-target="painel-fizeram">
     <div class="stat-tile stat-tile-kpi" style="position:relative">
       <div class="stat-value" style="color:var(--success)">{{ campanha.fizeram }}</div>
@@ -35,6 +40,12 @@
     </div>
   </a>
 </div>
+<p class="text-muted" style="font-size:12.5px; margin:-10px 0 12px 0">
+  Meta da Campanha ({{ campanha.precisam_exame }}) = Exames Realizados ({{ campanha.fizeram }}) + Exames
+  Pendentes ({{ campanha.pendentes }}). Vem do cruzamento da lista do RH com a base mestre
+  ({{ campanha.total_membros }} convocados por estarem com o ASO vencido), descontando
+  {{ campanha.nao_precisou }} que ficaram com o ASO em dia por fora antes de comparecer.
+</p>
 {% if campanha.fora_do_local %}
 <p class="text-muted" style="font-size:12.5px; margin:-10px 0 12px 0">
   + {{ campanha.fora_do_local }} pessoa{{ 's' if campanha.fora_do_local != 1 else '' }} de outro local também
@@ -49,16 +60,15 @@
 
 <div class="card">
   <div class="progress-meta">
-    <strong>Progresso de Exames Realizados</strong><span>{{ campanha.fizeram }}/{{ campanha.precisam_exame }} · {{ campanha.percentual_compareceram }}%</span>
+    <strong>Progresso da Meta da Campanha</strong><span>{{ campanha.fizeram }}/{{ campanha.precisam_exame }} · {{ campanha.percentual_compareceram }}%</span>
   </div>
   <div class="progress-track lg">
     <div class="progress-fill" style="width:{{ campanha.percentual_compareceram }}%"></div>
   </div>
   <p class="card-subtitle" style="margin:10px 0 0 0">
-    Denominador é quem realmente precisava comparecer ({{ campanha.precisam_exame }} = meta menos quem já
-    ficou com o ASO em dia por fora), não a meta bruta ({{ campanha.total_membros }}).
     "Concluído" ({{ campanha.concluidos }}/{{ campanha.total_membros }} · {{ campanha.percentual_concluido }}%)
-    já conta quem realizou o exame aqui <strong>+</strong> quem já não precisava, sobre a meta bruta.
+    é outra métrica: conta quem realizou o exame aqui <strong>+</strong> quem já não precisava, sobre o total
+    de convocados no cruzamento ({{ campanha.total_membros }}), antes de descontar quem ficou em dia por fora.
   </p>
 </div>
 
