@@ -214,6 +214,22 @@ def processar_baixa_diaria(
             """,
             (dt_realizacao.isoformat(), status, funcionario_id),
         )
+
+        if campanha_id is not None:
+            # Registra comparecimento real nesta campanha, num dia específico —
+            # é o que diferencia "fez o exame aqui" de "já estava dispensado
+            # por algum outro motivo" no dashboard da campanha.
+            conn.execute(
+                """
+                INSERT INTO campanha_atendimentos (campanha_id, funcionario_id, data_atendimento, criado_em)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(campanha_id, funcionario_id) DO UPDATE SET
+                    data_atendimento = excluded.data_atendimento,
+                    criado_em = excluded.criado_em
+                """,
+                (campanha_id, funcionario_id, dt_realizacao.isoformat(), agora),
+            )
+
         relatorio.fizeram.append(ItemFeito(funcionario_id, nome_atual, dt_realizacao.isoformat()))
 
     # Quem estava agendado para essa data e não apareceu na planilha do dia

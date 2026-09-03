@@ -2,8 +2,10 @@ from datetime import date
 
 import pytest
 
+import campanhas
 from baixa_diaria import processar_baixa_diaria
 from matching import normalizar_nome
+from datetime import date as date_cls
 
 
 @pytest.fixture
@@ -15,6 +17,13 @@ def base_populada(conn):
     )
     conn.commit()
     return conn
+
+
+@pytest.fixture
+def campanha_id(base_populada):
+    return campanhas.criar_campanha(
+        base_populada, "Brasilia", date_cls(2026, 9, 2), date_cls(2026, 9, 4), kits_enviados=False
+    )
 
 
 class TestProcessarBaixaDiaria:
@@ -91,6 +100,41 @@ class TestProcessarBaixaDiaria:
         )
         assert len(rel.fizeram) == 1
         assert rel.fizeram[0].data_realizacao == "2026-09-02"
+
+    def test_registra_atendimento_na_campanha_quando_fez_o_exame(self, base_populada, campanha_id):
+        rel = processar_baixa_diaria(
+            base_populada, [{"id": "1", "nome": "Joao", "data_ultimo_aso": "02/09/2026"}],
+            date(2026, 9, 2), local_trabalho="Brasilia", campanha_id=campanha_id,
+        )
+        assert len(rel.fizeram) == 1
+        row = base_populada.execute(
+            "SELECT data_atendimento FROM campanha_atendimentos WHERE campanha_id=? AND funcionario_id='1'",
+            (campanha_id,),
+        ).fetchone()
+        assert row is not None
+        assert row["data_atendimento"] == "2026-09-02"
+
+    def test_nao_registra_atendimento_para_quem_esta_pendente(self, base_populada, campanha_id):
+        processar_baixa_diaria(
+            base_populada, [{"id": "1", "nome": "Joao", "data_ultimo_aso": "Pendente"}],
+            date(2026, 9, 2), local_trabalho="Brasilia", campanha_id=campanha_id,
+        )
+        row = base_populada.execute(
+            "SELECT 1 FROM campanha_atendimentos WHERE campanha_id=? AND funcionario_id='1'",
+            (campanha_id,),
+        ).fetchone()
+        assert row is None
+
+    def test_sem_campanha_id_nao_registra_atendimento(self, base_populada):
+        """Baixa diária processada fora do contexto de campanha (campanha_id=None)
+        continua funcionando, só não grava em campanha_atendimentos."""
+        rel = processar_baixa_diaria(
+            base_populada, [{"id": "1", "nome": "Joao", "data_ultimo_aso": "02/09/2026"}],
+            date(2026, 9, 2), local_trabalho="Brasilia",
+        )
+        assert len(rel.fizeram) == 1
+        total = base_populada.execute("SELECT COUNT(*) AS n FROM campanha_atendimentos").fetchone()["n"]
+        assert total == 0
 
     def test_valor_nao_reconhecido_vira_inconsistencia_nao_pendente(self, base_populada):
         """Um valor que não é data nem 'Pendente' não deve decidir sozinho

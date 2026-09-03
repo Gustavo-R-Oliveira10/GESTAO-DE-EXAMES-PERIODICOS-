@@ -82,6 +82,31 @@ CREATE TABLE IF NOT EXISTS campanha_rh_resultado (
     criado_em TEXT NOT NULL
 );
 
+-- Dias reais de atendimento médico da campanha (ex: Brasília teve 02/09 e
+-- 04/09, com horários diferentes cada um) — vem do cronograma oficial.
+-- Permite saber "quantos foram no dia X" separado de "quantos foram no
+-- total", já que uma campanha pode ter vários dias não-contíguos.
+CREATE TABLE IF NOT EXISTS campanha_dias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campanha_id INTEGER NOT NULL REFERENCES campanhas(id),
+    data TEXT NOT NULL,
+    hora_inicio TEXT,
+    hora_fim TEXT
+);
+
+-- Registro de quem efetivamente compareceu (recebeu baixa) dentro de uma
+-- campanha, e em qual dia. Existe pra separar "Concluído porque fez o exame
+-- nesta campanha" de "Concluído porque já estava com o ASO em dia por outro
+-- motivo" — as duas coisas deixam status_aso='Dispensado' igual, mas só a
+-- primeira representa comparecimento real nesta campanha.
+CREATE TABLE IF NOT EXISTS campanha_atendimentos (
+    campanha_id INTEGER NOT NULL REFERENCES campanhas(id),
+    funcionario_id TEXT NOT NULL REFERENCES funcionarios(id),
+    data_atendimento TEXT NOT NULL,
+    criado_em TEXT NOT NULL,
+    PRIMARY KEY (campanha_id, funcionario_id)
+);
+
 CREATE TABLE IF NOT EXISTS excecoes_matching (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     importacao_id INTEGER REFERENCES importacoes_rh(id),

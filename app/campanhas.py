@@ -30,14 +30,25 @@ class Campanha:
     detalhe_operacao: str | None = None
     lista_rh_processada_em: str | None = None
     lista_rh_arquivo: str | None = None
-    total_membros: int = 0
-    concluidos: int = 0
+    total_membros: int = 0       # Convocados — ASO vencido no cruzamento com a lista do RH
+    concluidos: int = 0          # fizeram + nao_precisou (status_aso='Dispensado', por qualquer motivo)
+    fizeram: int = 0             # compareceram de verdade nesta campanha (campanha_atendimentos)
+    nao_precisou: int = 0        # já estavam com ASO em dia por outro motivo, nunca vieram a esta campanha
+    pendentes: int = 0           # ainda precisam fazer o exame
 
     @property
     def percentual_concluido(self) -> float:
         if not self.total_membros:
             return 0.0
         return round(self.concluidos / self.total_membros * 100, 1)
+
+    @property
+    def percentual_compareceram(self) -> float:
+        """% de quem realmente veio fazer o exame nesta campanha (exclui
+        quem já estava em dia por fora) — mede o comparecimento de verdade."""
+        if not self.total_membros:
+            return 0.0
+        return round(self.fizeram / self.total_membros * 100, 1)
 
     @property
     def lista_rh_travada(self) -> bool:
@@ -89,16 +100,23 @@ def _linha_para_campanha(row) -> Campanha:
         lista_rh_arquivo=row["lista_rh_arquivo"],
         total_membros=row["total_membros"] or 0,
         concluidos=row["concluidos"] or 0,
+        fizeram=row["fizeram"] or 0,
+        nao_precisou=row["nao_precisou"] or 0,
+        pendentes=row["pendentes"] or 0,
     )
 
 
 _QUERY_CAMPANHAS_COM_PROGRESSO = """
     SELECT c.*,
-           COUNT(cm.funcionario_id) AS total_membros,
-           SUM(CASE WHEN f.status_aso = 'Dispensado' THEN 1 ELSE 0 END) AS concluidos
+           COUNT(DISTINCT cm.funcionario_id) AS total_membros,
+           SUM(CASE WHEN f.status_aso = 'Dispensado' THEN 1 ELSE 0 END) AS concluidos,
+           SUM(CASE WHEN ca.funcionario_id IS NOT NULL THEN 1 ELSE 0 END) AS fizeram,
+           SUM(CASE WHEN f.status_aso = 'Dispensado' AND ca.funcionario_id IS NULL THEN 1 ELSE 0 END) AS nao_precisou,
+           SUM(CASE WHEN f.status_aso != 'Dispensado' THEN 1 ELSE 0 END) AS pendentes
     FROM campanhas c
     LEFT JOIN campanha_membros cm ON cm.campanha_id = c.id
     LEFT JOIN funcionarios f ON f.id = cm.funcionario_id
+    LEFT JOIN campanha_atendimentos ca ON ca.campanha_id = cm.campanha_id AND ca.funcionario_id = cm.funcionario_id
 """
 
 
@@ -135,6 +153,39 @@ def listar_membros_concluidos(conn: Connection, campanha_id: int) -> list[dict]:
         SELECT f.* FROM campanha_membros cm
         JOIN funcionarios f ON f.id = cm.funcionario_id
         WHERE cm.campanha_id = ? AND f.status_aso = 'Dispensado'
+        ORDER BY f.nome
+        """,
+        (campanha_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def listar_membros_fizeram(conn: Connection, campanha_id: int) -> list[dict]:
+    """Quem realmente compareceu (recebeu baixa) nesta campanha, com a data
+    de comparecimento — base do detalhamento por dia."""
+    rows = conn.execute(
+        """
+        SELECT f.*, ca.data_atendimento
+        FROM campanha_atendimentos ca
+        JOIN funcionarios f ON f.id = ca.funcionario_id
+        WHERE ca.campanha_id = ?
+        ORDER BY ca.data_atendimento, f.nome
+        """,
+        (campanha_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def listar_membros_nao_precisou(conn: Connection, campanha_id: int) -> list[dict]:
+    """Convocados que já estavam com o ASO em dia, mas nunca compareceram a
+    esta campanha — ficaram assim por algum outro motivo (recarga da base,
+    exame feito fora, etc)."""
+    rows = conn.execute(
+        """
+        SELECT f.* FROM campanha_membros cm
+        JOIN funcionarios f ON f.id = cm.funcionario_id
+        LEFT JOIN campanha_atendimentos ca ON ca.campanha_id = cm.campanha_id AND ca.funcionario_id = cm.funcionario_id
+        WHERE cm.campanha_id = ? AND f.status_aso = 'Dispensado' AND ca.funcionario_id IS NULL
         ORDER BY f.nome
         """,
         (campanha_id,),
@@ -246,6 +297,86 @@ CRONOGRAMA_OFICIAL = [
         "detalhe_operacao": "09h00 às 16h00 (6h de atendimento)",
     },
 ]
+
+
+# Dias reais de atendimento por local — cada entrada é um dia clínico
+# separado, com seu próprio horário (uma campanha pode ter dias não-
+# contíguos, ex: Brasília pulou o dia 03/09). Horário de Brasília ajustado
+# conforme confirmado com o usuário: 02/09 fechou às 18h, 04/09 só até 14h
+# (não 18h como no detalhe_operacao inicial, escrito antes de confirmar).
+CRONOGRAMA_DIAS_OFICIAL = {
+    "Brasilia": [
+        {"data": date(2026, 9, 2), "hora_inicio": "09:00", "hora_fim": "18:00"},
+        {"data": date(2026, 9, 4), "hora_inicio": "09:00", "hora_fim": "14:00"},
+    ],
+    "Botafogo": [
+        {"data": date(2026, 9, 25), "hora_inicio": "09:00", "hora_fim": "18:00"},
+        {"data": date(2026, 10, 5), "hora_inicio": "09:00", "hora_fim": "18:00"},
+    ],
+    "Península": [
+        {"data": date(2026, 9, 28), "hora_inicio": "09:00", "hora_fim": "18:00"},
+        {"data": date(2026, 9, 30), "hora_inicio": "09:00", "hora_fim": "18:00"},
+        {"data": date(2026, 10, 2), "hora_inicio": "09:00", "hora_fim": "13:00"},
+    ],
+    "Recife": [
+        {"data": date(2026, 9, 29), "hora_inicio": "09:00", "hora_fim": "16:00"},
+    ],
+    "Curitiba": [
+        {"data": date(2026, 11, 23), "hora_inicio": "09:00", "hora_fim": "16:00"},
+    ],
+}
+
+
+def seed_dias_campanhas_oficiais(conn: Connection) -> int:
+    """Pré-cadastra os dias de atendimento do cronograma oficial. Roda
+    independente de `seed_campanhas_oficiais` — casa pelo local_trabalho, então
+    funciona tanto pra campanha criada pelo seed quanto pra uma criada na mão
+    (ex: o usuário já tinha criado a de Brasília manualmente antes do seed
+    existir). Idempotente: pula qualquer campanha que já tenha dias
+    cadastrados, nunca duplica."""
+    criados = 0
+    for local_trabalho, dias in CRONOGRAMA_DIAS_OFICIAL.items():
+        campanha = conn.execute(
+            "SELECT id FROM campanhas WHERE local_trabalho = ?", (local_trabalho,)
+        ).fetchone()
+        if not campanha:
+            continue
+        campanha_id = campanha["id"]
+        ja_tem_dias = conn.execute(
+            "SELECT 1 FROM campanha_dias WHERE campanha_id = ?", (campanha_id,)
+        ).fetchone()
+        if ja_tem_dias:
+            continue
+        for dia in dias:
+            conn.execute(
+                "INSERT INTO campanha_dias (campanha_id, data, hora_inicio, hora_fim) VALUES (?, ?, ?, ?)",
+                (campanha_id, dia["data"].isoformat(), dia["hora_inicio"], dia["hora_fim"]),
+            )
+            criados += 1
+    conn.commit()
+
+    if criados:
+        registrar_log("Dias de atendimento do cronograma oficial pré-cadastrados", f"dias_criados={criados}")
+    return criados
+
+
+def listar_dias_campanha(conn: Connection, campanha_id: int) -> list[dict]:
+    """Cada dia de atendimento da campanha, com quantos compareceram naquele
+    dia específico (via campanha_atendimentos.data_atendimento)."""
+    rows = conn.execute(
+        """
+        SELECT cd.id, cd.data, cd.hora_inicio, cd.hora_fim,
+               COUNT(ca.funcionario_id) AS total_atendidos
+        FROM campanha_dias cd
+        LEFT JOIN campanha_atendimentos ca
+            ON ca.campanha_id = cd.campanha_id AND ca.data_atendimento = cd.data
+        WHERE cd.campanha_id = ?
+        GROUP BY cd.id
+        ORDER BY cd.data
+        """,
+        (campanha_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def seed_campanhas_oficiais(conn: Connection) -> int:

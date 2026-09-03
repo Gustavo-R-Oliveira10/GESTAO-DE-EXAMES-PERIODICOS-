@@ -11,18 +11,45 @@
 
 <div class="stats-row">
   <div class="stat-tile"><div class="stat-value">{{ campanha.total_membros }}</div><div class="stat-label">Convocados (ASO vencido)</div></div>
-  <div class="stat-tile"><div class="stat-value" style="color:var(--success)">{{ campanha.concluidos }}</div><div class="stat-label">Concluídos</div></div>
-  <div class="stat-tile"><div class="stat-value" style="color:var(--warning)">{{ campanha.total_membros - campanha.concluidos }}</div><div class="stat-label">Ainda pendentes</div></div>
+  <div class="stat-tile"><div class="stat-value" style="color:var(--success)">{{ campanha.fizeram }}</div><div class="stat-label">Fizeram o exame aqui</div></div>
+  <div class="stat-tile"><div class="stat-value" style="color:var(--accent-blue)">{{ campanha.nao_precisou }}</div><div class="stat-label">Não precisaram (ASO já em dia)</div></div>
+  <div class="stat-tile"><div class="stat-value" style="color:var(--warning)">{{ campanha.pendentes }}</div><div class="stat-label">Ainda pendentes</div></div>
 </div>
 
 <div class="card">
   <div class="progress-meta">
-    <strong>Progresso da campanha</strong><span>{{ campanha.percentual_concluido }}%</span>
+    <strong>Compareceram nesta campanha</strong><span>{{ campanha.fizeram }}/{{ campanha.total_membros }} · {{ campanha.percentual_compareceram }}%</span>
   </div>
   <div class="progress-track lg">
-    <div class="progress-fill" style="width:{{ campanha.percentual_concluido }}%"></div>
+    <div class="progress-fill" style="width:{{ campanha.percentual_compareceram }}%"></div>
+  </div>
+  <p class="card-subtitle" style="margin:10px 0 0 0">
+    "Concluído" ({{ campanha.concluidos }}/{{ campanha.total_membros }} · {{ campanha.percentual_concluido }}%) conta
+    quem fez o exame aqui <strong>+</strong> quem já não precisava (ASO em dia por outro motivo) — a barra acima
+    isola só quem realmente compareceu nesta campanha.
+  </p>
+</div>
+
+{% if dias %}
+<div class="card">
+  <h2>Atendimento por dia</h2>
+  <p class="card-subtitle">Dias oficiais do cronograma médico desta campanha, com quantos compareceram em cada um.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Data</th><th>Horário</th><th>Compareceram</th></tr></thead>
+      <tbody>
+        {% for d in dias %}
+        <tr>
+          <td>{{ d.data | data_br }}</td>
+          <td>{{ d.hora_inicio or '—' }}{% if d.hora_fim %} às {{ d.hora_fim }}{% endif %}</td>
+          <td><span class="badge badge-success">{{ d.total_atendidos }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
+{% endif %}
 
 <div class="card">
   <h2>1. Lista do RH do local de trabalho</h2>
@@ -178,6 +205,40 @@
   </div>
   {% else %}
   <div class="empty-state">Todo mundo desta campanha já concluiu.</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Fizeram o exame aqui ({{ fizeram_membros|length }})</h2>
+  <p class="card-subtitle">Convocados que realmente compareceram nesta campanha e receberam baixa.</p>
+  {% if fizeram_membros %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Data de comparecimento</th></tr></thead>
+      <tbody>
+        {% for f in fizeram_membros %}<tr><td>{{ f.id }}</td><td>{{ f.nome }}</td><td>{{ f.funcao or '—' }}</td><td>{{ f.data_atendimento | data_br }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">Ninguém compareceu ainda.</div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Não precisaram fazer exame ({{ nao_precisou_membros|length }})</h2>
+  <p class="card-subtitle">Estavam convocados (vencidos no cruzamento da lista do RH), mas o ASO já ficou em dia por outro motivo — nunca compareceram a esta campanha.</p>
+  {% if nao_precisou_membros %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Último ASO</th></tr></thead>
+      <tbody>
+        {% for n in nao_precisou_membros %}<tr><td>{{ n.id }}</td><td>{{ n.nome }}</td><td>{{ n.funcao or '—' }}</td><td>{{ n.data_ultimo_aso | data_br }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">Nenhum caso — todo "Dispensado" aqui veio de comparecimento real.</div>
   {% endif %}
 </div>
 {% endblock %}
