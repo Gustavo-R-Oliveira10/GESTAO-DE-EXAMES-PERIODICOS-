@@ -7,11 +7,11 @@
 </div>
 
 <div class="card">
-  <h2>Nova campanha</h2>
+  <h2>Nova Campanha</h2>
   <form method="post">
     <div class="field-row">
       <div class="field">
-        <label for="local_trabalho">Local de trabalho</label>
+        <label for="local_trabalho">Local de Trabalho</label>
         <input type="text" id="local_trabalho" name="local_trabalho" list="locais_sugeridos" placeholder="Ex: Brasília" required>
         <datalist id="locais_sugeridos">
           {% for local in locais %}<option value="{{ local }}">{% endfor %}
@@ -27,20 +27,20 @@
       </div>
     </div>
     <div class="field">
-      <label for="detalhe_operacao">Detalhe da operação (opcional)</label>
+      <label for="detalhe_operacao">Detalhe da Operação (opcional)</label>
       <input type="text" id="detalhe_operacao" name="detalhe_operacao" placeholder="Ex: 09h00 às 18h00 (8h de atendimento)">
     </div>
     <div class="field">
       <label style="display:flex; align-items:center; gap:8px; font-weight:400">
-        <input type="checkbox" name="kits_enviados" style="width:auto"> Kits enviados
+        <input type="checkbox" name="kits_enviados" style="width:auto"> Kits Enviados
       </label>
     </div>
-    <button class="btn" type="submit">Criar campanha</button>
+    <button class="btn" type="submit">Criar Campanha</button>
   </form>
 </div>
 
 <div class="card">
-  <h2>Campanhas existentes</h2>
+  <h2>Campanhas Existentes</h2>
   {% if campanhas %}
   <div class="table-wrap">
     <table>

@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Fila de exceções — Controle de Periódicos{% endblock %}
+{% block title %}Fila de Exceções — Controle de Periódicos{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>Fila de exceções</h1>
+  <h1>Fila de Exceções</h1>
   <p>
     Linhas de uma planilha (baixa diária) que o sistema <strong>não conseguiu casar automaticamente</strong>
     com ninguém da base mestre (ID, CPF e nome não bateram). Ficam aqui pra você confirmar manualmente —
@@ -21,11 +21,11 @@
       <div style="margin-left:auto; display:flex; gap:8px">
         <button class="btn btn-secondary btn-sm" type="submit" name="acao" value="aprovar"
           onclick="return confirm('Aprovar as selecionadas com o melhor candidato sugerido (só quando o score for alto, ≥85)? As com candidato fraco continuam pendentes.')">
-          Aprovar selecionadas
+          Aprovar Selecionadas
         </button>
         <button class="btn btn-outline btn-sm" type="submit" name="acao" value="excluir"
           onclick="return confirm('Excluir as selecionadas da fila (sem vincular a ninguém)?')">
-          Excluir selecionadas
+          Excluir Selecionadas
         </button>
       </div>
     </div>
@@ -71,11 +71,11 @@
 </div>
 
 <div class="card">
-  <h2>Limpar tudo</h2>
+  <h2>Limpar Tudo</h2>
   <p class="card-subtitle">Remove todas as {{ pendentes|length }} pendências da fila sem vincular a ninguém. Use se a fila encheu por um erro de importação (ex: planilha sem cabeçalho reconhecível).</p>
   <form method="post" action="{{ url_for('excecoes_limpar_tudo') }}"
     onsubmit="return confirm('Isso remove TODAS as {{ pendentes|length }} exceções pendentes da fila, sem vincular ninguém. Confirmar?')">
-    <button class="btn btn-outline" type="submit">Limpar toda a fila</button>
+    <button class="btn btn-outline" type="submit">Limpar Toda a Fila</button>
   </form>
 </div>
 

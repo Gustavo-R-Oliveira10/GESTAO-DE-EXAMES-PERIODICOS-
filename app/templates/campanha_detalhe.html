@@ -13,67 +13,71 @@
 <div class="stats-row">
   <div class="stat-tile">
     <div class="stat-value">{{ campanha.total_funcionarios_filial }}</div>
-    <div class="stat-label">Total de funcionários na filial</div>
+    <div class="stat-label">Total de Funcionários no Local</div>
   </div>
   <div class="stat-tile">
     <div class="stat-value" style="color:var(--accent-blue)">{{ campanha.total_membros }}</div>
-    <div class="stat-label">Meta desta campanha</div>
+    <div class="stat-label">Meta da Campanha</div>
   </div>
   <a class="stat-tile-link" href="#painel-fizeram" data-target="painel-fizeram">
     <div class="stat-tile" style="position:relative">
       <div class="stat-value" style="color:var(--success)">{{ campanha.fizeram }}</div>
-      <div class="stat-label">Compareceram</div>
+      <div class="stat-label">Exames Realizados</div>
     </div>
   </a>
   <a class="stat-tile-link" href="#painel-nao-precisou" data-target="painel-nao-precisou">
     <div class="stat-tile" style="position:relative">
       <div class="stat-value" style="color:var(--accent-blue)">{{ campanha.nao_precisou }}</div>
-      <div class="stat-label">Já estavam em dia</div>
+      <div class="stat-label">ASO em Dia (Sem Comparecimento)</div>
     </div>
   </a>
   <a class="stat-tile-link" href="#painel-pendentes" data-target="painel-pendentes">
     <div class="stat-tile" style="position:relative">
       <div class="stat-value" style="color:var(--warning)">{{ campanha.pendentes }}</div>
-      <div class="stat-label">Ainda pendentes</div>
+      <div class="stat-label">Exames Pendentes</div>
     </div>
   </a>
   {% if campanha.fora_do_local %}
   <a class="stat-tile-link" href="#painel-fora-do-local" data-target="painel-fora-do-local">
     <div class="stat-tile" style="position:relative">
       <div class="stat-value" style="color:var(--accent-blue)">{{ campanha.fora_do_local }}</div>
-      <div class="stat-label">De outra filial, fizeram aqui</div>
+      <div class="stat-label">De Outro Local (Realizados Aqui)</div>
     </div>
   </a>
   {% endif %}
 </div>
 <p class="text-muted" style="font-size:12.5px; margin:-10px 0 20px 0">
-  "Meta desta campanha" é a foto de quem estava com o ASO vencido no momento em que a lista do RH foi
-  cruzada — nem todos os {{ campanha.total_membros }} continuam vencidos hoje: os
-  {{ campanha.nao_precisou }} "Já estavam em dia" viraram vigentes por fora; só os
-  {{ campanha.pendentes }} "Ainda pendentes" estão vencidos agora, de verdade.
-  {% if campanha.fora_do_local %} Além disso, {{ campanha.fora_do_local }} pessoa(s) de outra filial
+  "Meta da Campanha" é a foto de quem estava com o ASO vencido no momento em que a lista do RH foi
+  cruzada: {{ campanha.total_membros }} pessoas. Dessas, {{ campanha.nao_precisou }} ficaram com o
+  "ASO em Dia" por fora, sem precisar comparecer — sobram <strong>{{ campanha.precisam_exame }}</strong>
+  que realmente precisam (ou precisaram) realizar o exame nesta campanha
+  ({{ campanha.total_membros }} − {{ campanha.nao_precisou }} = {{ campanha.precisam_exame }}). Desses
+  {{ campanha.precisam_exame }}, {{ campanha.fizeram }} já compareceram e {{ campanha.pendentes }} ainda
+  estão pendentes ({{ campanha.fizeram }} + {{ campanha.pendentes }} = {{ campanha.precisam_exame }}).
+  {% if campanha.fora_do_local %} Além disso, {{ campanha.fora_do_local }} pessoa(s) de outro local
   também compareceram aqui — não contam pra meta de {{ campanha.local_trabalho }}, mas já foram
   atualizadas na base mestre normalmente.{% endif %}
 </p>
 
 <div class="card">
   <div class="progress-meta">
-    <strong>Compareceram nesta campanha</strong><span>{{ campanha.fizeram }}/{{ campanha.total_membros }} · {{ campanha.percentual_compareceram }}%</span>
+    <strong>Progresso de Exames Realizados</strong><span>{{ campanha.fizeram }}/{{ campanha.precisam_exame }} · {{ campanha.percentual_compareceram }}%</span>
   </div>
   <div class="progress-track lg">
     <div class="progress-fill" style="width:{{ campanha.percentual_compareceram }}%"></div>
   </div>
   <p class="card-subtitle" style="margin:10px 0 0 0">
-    "Concluído" ({{ campanha.concluidos }}/{{ campanha.total_membros }} · {{ campanha.percentual_concluido }}%) conta
-    quem fez o exame aqui <strong>+</strong> quem já não precisava (ASO em dia por outro motivo) — a barra acima
-    isola só quem realmente compareceu nesta campanha.
+    Denominador é quem realmente precisava comparecer ({{ campanha.precisam_exame }} = meta menos quem já
+    ficou com o ASO em dia por fora), não a meta bruta ({{ campanha.total_membros }}).
+    "Concluído" ({{ campanha.concluidos }}/{{ campanha.total_membros }} · {{ campanha.percentual_concluido }}%)
+    já conta quem realizou o exame aqui <strong>+</strong> quem já não precisava, sobre a meta bruta.
   </p>
 </div>
 
 {% if dias %}
 <div class="card">
-  <h2>Atendimento por dia</h2>
-  <p class="card-subtitle">Dias oficiais do cronograma médico desta campanha, com quantos compareceram em cada um (inclui gente de outra filial, se houver).</p>
+  <h2>Comparecimento por Dia</h2>
+  <p class="card-subtitle">Dias oficiais do cronograma médico desta campanha, com quantos compareceram em cada um (inclui gente de outro local, se houver).</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Data</th><th>Horário</th><th>Compareceram</th></tr></thead>
@@ -92,12 +96,12 @@
 {% endif %}
 
 <div class="card">
-  <h2>1. Lista do RH do local de trabalho</h2>
+  <h2>1. Lista do RH</h2>
 
   {% if not campanha.lista_rh_travada %}
   <p class="card-subtitle">
     A planilha que o RH de {{ campanha.local_trabalho }} te manda com quem precisa fazer o exame.
-    Cruza contra a base mestre e barra automaticamente quem já está "Dispensado" (ASO em dia) —
+    Cruza contra a base mestre e barra automaticamente quem já está com o "ASO em Dia" —
     só quem está com o ASO vencido entra como meta desta campanha. Quem não bateu vai para a fila
     de exceções. <strong>Esse envio só pode ser feito uma vez por campanha.</strong>
   </p>
@@ -105,13 +109,13 @@
     <div class="field">
       <label for="arquivo_rh">Planilha do RH (.xlsx)</label>
       <div class="file-drop">
-        Matricula e/ou CPF e/ou Nome
+        Matrícula e/ou CPF e/ou Nome
         <br><input type="file" id="arquivo_rh" name="arquivo" accept=".xlsx,.xls" required>
       </div>
     </div>
     <button class="btn btn-secondary" type="submit"
       onclick="return confirm('A lista do RH só pode ser enviada uma vez para esta campanha. Confirmar o envio?')">
-      Importar lista do RH
+      Importar Lista do RH
     </button>
   </form>
 
@@ -121,7 +125,7 @@
     (arquivo: <strong>{{ campanha.lista_rh_arquivo }}</strong>) — não pode ser reenviada para esta campanha.
   </div>
 
-  {% call m.accordion('painel-convocados-rh', 'Convocados (vencidos no cruzamento)', convocados|length, vazio_texto='Nenhum convocado — todo mundo da lista já estava com o ASO em dia.') %}
+  {% call m.accordion('painel-convocados-rh', 'Convocados (ASO Vencido)', convocados|length, vazio_texto='Nenhum convocado — todo mundo da lista já estava com o ASO em dia.') %}
   <table>
     <thead><tr><th>ID</th><th>Nome</th></tr></thead>
     <tbody>
@@ -130,7 +134,7 @@
   </table>
   {% endcall %}
 
-  {% call m.accordion('painel-ja-dispensados-rh', 'Já dispensados (barrados da meta)', ja_dispensados|length, accent='accent-success', vazio_texto='Ninguém foi barrado — todo mundo da lista estava vencido.') %}
+  {% call m.accordion('painel-ja-dispensados-rh', 'Já Dispensados (Fora da Meta)', ja_dispensados|length, accent='accent-success', vazio_texto='Ninguém foi barrado — todo mundo da lista estava vencido.') %}
   <table>
     <thead><tr><th>ID</th><th>Nome</th></tr></thead>
     <tbody>
@@ -142,28 +146,28 @@
 </div>
 
 <div class="card">
-  <h2>2. Lista de presença do dia</h2>
+  <h2>2. Lista de Presença Diária</h2>
   <p class="card-subtitle">
     Aceita tanto uma lista simples de presença (só quem foi) quanto uma planilha com todo mundo e
     uma coluna de data por pessoa (data real ou "Pendente") — o sistema lê o valor de cada linha,
     nunca assume que aparecer na planilha significa ter feito o exame. Cruza sempre pelo ID/matrícula
-    primeiro, então funciona mesmo pra quem não é desta filial.
+    primeiro, então funciona mesmo pra quem não é deste local.
   </p>
   <form method="post" action="{{ url_for('campanha_processar_dia', campanha_id=campanha.id) }}" enctype="multipart/form-data">
     <div class="field-row">
       <div class="field">
-        <label for="data_relatorio">Data do atendimento</label>
+        <label for="data_relatorio">Data do Atendimento</label>
         <input type="date" id="data_relatorio" name="data_relatorio" value="{{ hoje }}">
       </div>
     </div>
     <div class="field">
-      <label for="arquivo">Planilha do dia (.xlsx)</label>
+      <label for="arquivo">Planilha do Dia (.xlsx)</label>
       <div class="file-drop">
         Selecione a lista de presença enviada pelo RH
         <br><input type="file" id="arquivo" name="arquivo" accept=".xlsx,.xls" required>
       </div>
     </div>
-    <button class="btn" type="submit">Processar dia</button>
+    <button class="btn" type="submit">Processar Dia</button>
   </form>
 </div>
 
@@ -171,13 +175,13 @@
 <div class="card">
   <h2>Resultado — {{ relatorio.data_relatorio | data_br }}</h2>
   <div class="stats-row">
-    <div class="stat-tile"><div class="stat-value">{{ relatorio.fizeram|length }}</div><div class="stat-label">Fizeram o exame</div></div>
-    <div class="stat-tile"><div class="stat-value" style="color:var(--warning)">{{ relatorio.ainda_pendentes|length }}</div><div class="stat-label">Aguardando confirmação</div></div>
-    <div class="stat-tile"><div class="stat-value">{{ relatorio.faltaram|length }}</div><div class="stat-label">Faltaram (agendados)</div></div>
+    <div class="stat-tile"><div class="stat-value">{{ relatorio.fizeram|length }}</div><div class="stat-label">Exames Realizados</div></div>
+    <div class="stat-tile"><div class="stat-value" style="color:var(--warning)">{{ relatorio.ainda_pendentes|length }}</div><div class="stat-label">Aguardando Confirmação</div></div>
+    <div class="stat-tile"><div class="stat-value">{{ relatorio.faltaram|length }}</div><div class="stat-label">Faltas (Agendados)</div></div>
     <div class="stat-tile"><div class="stat-value">{{ relatorio.inconsistencias|length }}</div><div class="stat-label">Inconsistências</div></div>
   </div>
 
-  {% call m.accordion('painel-resultado-fizeram', 'Fizeram o exame', relatorio.fizeram|length, accent='accent-success') %}
+  {% call m.accordion('painel-resultado-fizeram', 'Exames Realizados', relatorio.fizeram|length, accent='accent-success') %}
   <table>
     <thead><tr><th>ID</th><th>Nome</th><th>Data realização</th></tr></thead>
     <tbody>
@@ -186,7 +190,7 @@
   </table>
   {% endcall %}
 
-  {% call m.accordion('painel-resultado-pendentes', 'Aguardando confirmação (nesta planilha)', relatorio.ainda_pendentes|length, accent='accent-warning', vazio_texto='Ninguém ficou pendente nesta planilha.') %}
+  {% call m.accordion('painel-resultado-pendentes', 'Aguardando Confirmação (Nesta Planilha)', relatorio.ainda_pendentes|length, accent='accent-warning', vazio_texto='Ninguém ficou pendente nesta planilha.') %}
   <p class="card-subtitle" style="margin-top:0">Estavam na planilha, mas a coluna de data dizia "Pendente" — nenhuma baixa foi aplicada.</p>
   <table>
     <thead><tr><th>ID</th><th>Nome</th></tr></thead>
@@ -209,7 +213,7 @@
 </div>
 {% endif %}
 
-{% call m.accordion('painel-pendentes', 'Pendentes da campanha', pendentes|length, accent='accent-warning', vazio_texto='Todo mundo desta campanha já concluiu.') %}
+{% call m.accordion('painel-pendentes', 'Exames Pendentes', pendentes|length, accent='accent-warning', vazio_texto='Todo mundo desta campanha já concluiu.') %}
 <table>
   <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Último ASO</th></tr></thead>
   <tbody>
@@ -218,16 +222,16 @@
 </table>
 {% endcall %}
 
-{% call m.accordion('painel-fizeram', 'Compareceram nesta campanha', fizeram_membros|length, accent='accent-success', vazio_texto='Ninguém compareceu ainda.') %}
+{% call m.accordion('painel-fizeram', 'Exames Realizados', fizeram_membros|length, accent='accent-success', vazio_texto='Ninguém compareceu ainda.') %}
 <table>
-  <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Data de comparecimento</th></tr></thead>
+  <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Data de Comparecimento</th></tr></thead>
   <tbody>
     {% for f in fizeram_membros %}<tr><td>{{ f.id }}</td><td>{{ f.nome }}</td><td>{{ f.funcao or '—' }}</td><td>{{ f.data_atendimento | data_br }}</td></tr>{% endfor %}
   </tbody>
 </table>
 {% endcall %}
 
-{% call m.accordion('painel-nao-precisou', 'Já estavam em dia (sem comparecer aqui)', nao_precisou_membros|length, accent='accent-info', vazio_texto='Nenhum caso — todo "Dispensado" aqui veio de comparecimento real.') %}
+{% call m.accordion('painel-nao-precisou', 'ASO em Dia (Sem Comparecimento)', nao_precisou_membros|length, accent='accent-info', vazio_texto='Nenhum caso — todo "ASO em Dia" aqui veio de comparecimento real.') %}
 <p class="card-subtitle" style="margin-top:0">Estavam na meta (vencidos no cruzamento), mas o ASO já ficou em dia por outro motivo — nunca compareceram a esta campanha.</p>
 <table>
   <thead><tr><th>ID</th><th>Nome</th><th>Função</th><th>Último ASO</th></tr></thead>
@@ -238,7 +242,7 @@
 {% endcall %}
 
 {% if fora_do_local_membros %}
-{% call m.accordion('painel-fora-do-local', 'De outra filial, fizeram aqui', fora_do_local_membros|length, accent='accent-info') %}
+{% call m.accordion('painel-fora-do-local', 'De Outro Local (Realizados Aqui)', fora_do_local_membros|length, accent='accent-info') %}
 <p class="card-subtitle" style="margin-top:0">Não fazem parte da meta de {{ campanha.local_trabalho }}, mas já foram atualizados normalmente na base mestre (cruzamento sempre pelo ID).</p>
 <table>
   <thead><tr><th>ID</th><th>Nome</th><th>Local de trabalho real</th><th>Data de comparecimento</th></tr></thead>

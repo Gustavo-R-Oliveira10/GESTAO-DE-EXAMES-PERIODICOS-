@@ -7,24 +7,24 @@
 </div>
 
 <div class="card">
-  <h2>Processar lote</h2>
+  <h2>Processar Lote</h2>
   <p class="card-subtitle">
-    Quem não for identificado com confiança fica em "PDFs pendentes" para revisão manual —
+    Quem não for identificado com confiança fica em "PDFs Pendentes" para revisão manual —
     nada é descartado nem colado no arquivo errado.
   </p>
   <form method="post" enctype="multipart/form-data">
     <div class="field">
-      <label for="local_trabalho">Local de trabalho do lote (opcional, ajuda a evitar confusão entre locais)</label>
+      <label for="local_trabalho">Local de Trabalho do Lote (opcional, ajuda a evitar confusão entre locais)</label>
       <input type="text" id="local_trabalho" name="local_trabalho" placeholder="Ex: Brasília">
     </div>
     <div class="field">
-      <label for="arquivo">PDF do lote</label>
+      <label for="arquivo">PDF do Lote</label>
       <div class="file-drop">
         Selecione o PDF gigante enviado pela clínica
         <br><input type="file" id="arquivo" name="arquivo" accept=".pdf" required>
       </div>
     </div>
-    <button class="btn" type="submit">Processar lote</button>
+    <button class="btn" type="submit">Processar Lote</button>
   </form>
 </div>
 
@@ -32,8 +32,8 @@
 <div class="card">
   <h2>Resultado</h2>
   <div class="stats-row">
-    <div class="stat-tile"><div class="stat-value">{{ relatorio.separados|length }}</div><div class="stat-label">PDFs separados</div></div>
-    <div class="stat-tile"><div class="stat-value">{{ relatorio.pendentes|length }}</div><div class="stat-label">Pendentes de revisão</div></div>
+    <div class="stat-tile"><div class="stat-value">{{ relatorio.separados|length }}</div><div class="stat-label">PDFs Separados</div></div>
+    <div class="stat-tile"><div class="stat-value">{{ relatorio.pendentes|length }}</div><div class="stat-label">Pendentes de Revisão</div></div>
   </div>
 
   {% if relatorio.separados %}
@@ -53,7 +53,7 @@
   {% if relatorio.pendentes %}
   <div class="alert alert-warning" style="margin-top:16px">
     {{ relatorio.pendentes|length }} documento(s) não identificados automaticamente.
-    <a href="{{ url_for('pdfs_pendentes') }}">Revisar agora</a>.
+    <a href="{{ url_for('pdfs_pendentes') }}">Revisar Agora</a>.
   </div>
   {% endif %}
 </div>

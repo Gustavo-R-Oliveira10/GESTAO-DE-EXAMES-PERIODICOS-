@@ -23,7 +23,7 @@
       </span>
     </div>
     <div class="stat-value">{{ totais.total or 0 }}</div>
-    <div class="stat-label">Total de funcionários (vigentes)</div>
+    <div class="stat-label">Total de Funcionários</div>
   </div>
   <div class="stat-tile">
     <div class="stat-head">
@@ -32,7 +32,7 @@
       </span>
     </div>
     <div class="stat-value" style="color: var(--success)">{{ totais.fizeram_exame or 0 }}</div>
-    <div class="stat-label">Fizeram o exame (em alguma campanha)</div>
+    <div class="stat-label">Exames Realizados</div>
   </div>
   <div class="stat-tile">
     <div class="stat-head">
@@ -41,7 +41,7 @@
       </span>
     </div>
     <div class="stat-value" style="color: var(--accent-blue)">{{ totais.ja_estavam_em_dia or 0 }}</div>
-    <div class="stat-label">Já estavam em dia (nunca precisaram)</div>
+    <div class="stat-label">ASO em Dia (Sem Convocação)</div>
   </div>
   <div class="stat-tile">
     <div class="stat-head">
@@ -50,18 +50,18 @@
       </span>
     </div>
     <div class="stat-value" style="color: var(--warning)">{{ totais.precisam_exame or 0 }}</div>
-    <div class="stat-label">Precisam de exame / vencidos</div>
+    <div class="stat-label">Exames Pendentes</div>
   </div>
 </div>
 <p class="text-muted" style="font-size:12.5px; margin:-10px 0 20px 0">
-  "Dispensado" ({{ totais.dispensados or 0 }} no total) é a soma de duas coisas bem diferentes:
-  quem <strong>fez o exame de verdade</strong> numa campanha e quem <strong>nunca precisou vir</strong>
-  a lugar nenhum porque o ASO já estava em dia antes de qualquer campanha existir.
+  "ASO em Dia" ({{ totais.dispensados or 0 }} no total) é a soma de duas categorias distintas:
+  quem <strong>realizou o exame</strong> numa campanha e quem <strong>nunca precisou ser convocado</strong>
+  porque o ASO já estava válido antes de qualquer campanha existir.
 </p>
 
 <div class="card">
-  <h2>Meta de conclusão por local de trabalho</h2>
-  <p class="card-subtitle">Percentual de funcionários já dispensados (ASO em dia) em cada local.</p>
+  <h2>Progresso por Local de Trabalho</h2>
+  <p class="card-subtitle">Percentual de funcionários com ASO em dia em cada local.</p>
   {% if progresso %}
     {% for p in progresso %}
     <div style="margin-bottom:16px">
@@ -69,7 +69,7 @@
         <strong>{{ p.local_trabalho }}</strong>
         <span class="text-muted">
           {{ p.dispensados }}/{{ p.total }} · {{ p.percentual }}%
-          <span style="color:var(--success)">({{ p.fizeram_exame }} fizeram)</span>
+          <span style="color:var(--success)">({{ p.fizeram_exame }} exames realizados)</span>
         </span>
       </div>
       <div class="progress-track">
@@ -83,7 +83,7 @@
 </div>
 
 <div class="card">
-  <h2>Base mestre fixa</h2>
+  <h2>Base Mestre</h2>
   <p class="card-subtitle">
     Arquivo: <code>{{ caminho_base }}</code>. O app nunca escreve nesse arquivo — só lê.
     A leitura inicial só acontece uma vez (banco vazio). Use o botão abaixo quando você
@@ -92,12 +92,12 @@
     data/hora automaticamente, como ponto de recuperação.
   </p>
   <form method="post" action="{{ url_for('dashboard_recarregar') }}">
-    <button class="btn btn-secondary" type="submit">Recarregar base do arquivo</button>
+    <button class="btn btn-secondary" type="submit">Recarregar Base do Arquivo</button>
   </form>
 
   {% if backups %}
   <hr class="divider">
-  <h2 style="font-size:14px">Últimos backups (pontos de recuperação)</h2>
+  <h2 style="font-size:14px">Últimos Backups (Pontos de Recuperação)</h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Arquivo</th><th>Tamanho</th></tr></thead>

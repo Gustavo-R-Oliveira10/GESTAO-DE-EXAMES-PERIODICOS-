@@ -45,6 +45,14 @@ class Campanha:
         return self.fizeram + self.fora_do_local
 
     @property
+    def precisam_exame(self) -> int:
+        """Quantos da meta ainda precisam (ou precisaram) vir fazer o exame
+        nesta campanha de verdade — meta menos quem já ficou em dia por fora
+        (nao_precisou). É fizeram + pendentes, e é o denominador certo do
+        comparecimento (total_membros conta gente que nunca precisou vir)."""
+        return self.total_membros - self.nao_precisou
+
+    @property
     def percentual_concluido(self) -> float:
         if not self.total_membros:
             return 0.0
@@ -52,12 +60,13 @@ class Campanha:
 
     @property
     def percentual_compareceram(self) -> float:
-        """% de quem realmente veio fazer o exame nesta campanha (exclui
-        quem já estava em dia por fora) — mede o comparecimento de verdade.
+        """% de quem realmente precisava vir fazer o exame nesta campanha e já
+        veio (exclui do denominador quem nunca precisou comparecer, pois
+        ficou em dia por fora) — mede o comparecimento de verdade.
         Só conta gente da própria filial (fora_do_local não faz parte da meta)."""
-        if not self.total_membros:
+        if not self.precisam_exame:
             return 0.0
-        return round(self.fizeram / self.total_membros * 100, 1)
+        return round(self.fizeram / self.precisam_exame * 100, 1)
 
     @property
     def lista_rh_travada(self) -> bool:
