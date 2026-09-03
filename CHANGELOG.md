@@ -2,6 +2,47 @@
 
 Histórico das alterações do projeto, em ordem cronológica.
 
+## 2026-09-03 (4) — Acordeões, "Total de funcionários na filial", pessoas de outra filial
+
+- **Verificação pedida pelo usuário**: confirmado que a baixa da planilha de
+  Brasília do dia anterior foi aplicada corretamente (30 comparecimentos
+  reais, incluindo 2 pessoas de São Paulo que fizeram o exame em Brasília,
+  casadas certinho pelo ID/matrícula).
+- **Frontend sobrecarregado (feedback do usuário)**: tabelas longas agora
+  ficam dentro de acordeões (`<details>`, macro `_macros.html::accordion()`)
+  fechados por padrão, com rolagem interna (`max-height: 400px`) — não
+  empurram mais o layout da página pra baixo. Cards numéricos do topo viram
+  âncoras clicáveis que rolam até o painel certo e abrem sozinhas (com um
+  pulso visual). Rótulos revisados a pedido do usuário pra soar mais
+  profissional ("Fizeram o exame" → "Compareceram", "Não precisaram" → "Já
+  estavam em dia").
+- **Rótulo "Convocados" corrigido de novo (feedback do usuário)**: não é mais
+  o card principal — trocado por **"Total de funcionários na filial"**
+  (contagem simples e sempre correta de todo mundo do `local_trabalho`,
+  independente de precisar de exame). "Meta desta campanha" (antigo
+  Convocados) continua existindo, só não é mais o destaque do topo.
+- **Bug real encontrado pelo usuário**: o card "Fizeram" mostrava 28 mas a
+  tabela detalhada mostrava 30 — `listar_membros_fizeram` não filtrava por
+  `campanha_membros`, então incluía as 2 pessoas de fora da filial (SP) que
+  também fizeram o exame em Brasília. Corrigido separando em duas métricas:
+  `fizeram` (só quem é da própria filial) e `fora_do_local` (gente de outra
+  filial que também compareceu ali) — nova seção "De outra filial, fizeram
+  aqui" no dashboard. O casamento por ID já garantia que a base mestre fosse
+  atualizada certo pra essas pessoas antes dessa mudança — o que mudou foi só
+  a visibilidade/classificação, não a baixa em si.
+- Query de progresso da campanha reescrita com subqueries isoladas (uma por
+  métrica) em vez de um único JOIN encadeado, que multiplicava linhas e
+  dificultava separar "fora do local" (que por definição não está em
+  `campanha_membros`) do resto.
+- 4 novos testes cobrindo `total_funcionarios_filial` e `fora_do_local` —
+  suite total agora com 73 testes.
+- **Nota de depuração**: um teste local mostrou "Total de funcionários"
+  vazio mesmo com o dado certo no banco — causa era um `pythonw.exe` da
+  sessão anterior (do launcher `.vbs`) ainda rodando escondido (sem janela de
+  console) e disputando a porta 8501 com o `python.exe` recém-iniciado,
+  servindo código desatualizado. Sempre checar `pythonw.exe` além de
+  `python.exe` antes de assumir que a porta está livre.
+
 ## 2026-09-03 (3) — Dashboard por campanha: Fizeram / Não precisaram / Pendentes
 
 Branch `dashboard-campanha-por-dia`, mesclada em `main`.
