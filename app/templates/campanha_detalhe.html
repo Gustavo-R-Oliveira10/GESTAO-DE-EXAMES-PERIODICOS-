@@ -94,8 +94,9 @@
 <div class="card">
   <h2>2. Lista de presença do dia</h2>
   <p class="card-subtitle">
-    Quando o RH manda quem realmente apareceu no dia. Reconhece quem fez (dá baixa na base mestre) e
-    quem da lista pendente da campanha não fez — abate automaticamente da lista pendente.
+    Aceita tanto uma lista simples de presença (só quem foi) quanto uma planilha com todo mundo e
+    uma coluna de data por pessoa (data real ou "Pendente") — o sistema lê o valor de cada linha,
+    nunca assume que aparecer na planilha significa ter feito o exame.
   </p>
   <form method="post" action="{{ url_for('campanha_processar_dia', campanha_id=campanha.id) }}" enctype="multipart/form-data">
     <div class="field-row">
@@ -120,6 +121,7 @@
   <h2>Resultado — {{ relatorio.data_relatorio | data_br }}</h2>
   <div class="stats-row">
     <div class="stat-tile"><div class="stat-value">{{ relatorio.fizeram|length }}</div><div class="stat-label">Fizeram o exame</div></div>
+    <div class="stat-tile"><div class="stat-value" style="color:var(--warning)">{{ relatorio.ainda_pendentes|length }}</div><div class="stat-label">Ainda pendentes (na planilha)</div></div>
     <div class="stat-tile"><div class="stat-value">{{ relatorio.faltaram|length }}</div><div class="stat-label">Faltaram (agendados)</div></div>
     <div class="stat-tile"><div class="stat-value">{{ relatorio.inconsistencias|length }}</div><div class="stat-label">Inconsistências</div></div>
   </div>
@@ -131,6 +133,19 @@
       <thead><tr><th>ID</th><th>Nome</th><th>Data realização</th></tr></thead>
       <tbody>
         {% for f in relatorio.fizeram %}<tr><td>{{ f.funcionario_id }}</td><td>{{ f.nome }}</td><td>{{ f.data_realizacao | data_br }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if relatorio.ainda_pendentes %}
+  <h2>Ainda pendentes (na planilha)</h2>
+  <p class="card-subtitle">Estavam na planilha, mas a coluna de data dizia "Pendente" — nenhuma baixa foi aplicada.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Nome</th></tr></thead>
+      <tbody>
+        {% for p in relatorio.ainda_pendentes %}<tr><td>{{ p.funcionario_id }}</td><td>{{ p.nome }}</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

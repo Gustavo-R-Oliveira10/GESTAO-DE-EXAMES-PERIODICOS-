@@ -395,10 +395,15 @@ def campanha_processar_dia(campanha_id):
     relatorio = {
         "data_relatorio": rel.data_relatorio.isoformat(),
         "fizeram": [f.__dict__ for f in rel.fizeram],
+        "ainda_pendentes": [p.__dict__ for p in rel.ainda_pendentes],
         "faltaram": [f.__dict__ for f in rel.faltaram],
         "inconsistencias": [i.__dict__ for i in rel.inconsistencias],
     }
-    flash(f"Dia processado: {len(rel.fizeram)} concluído(s), {len(rel.inconsistencias)} inconsistência(s).", "success")
+    flash(
+        f"Dia processado: {len(rel.fizeram)} concluído(s), {len(rel.ainda_pendentes)} ainda pendente(s), "
+        f"{len(rel.inconsistencias)} inconsistência(s).",
+        "success",
+    )
 
     return render_template(
         "campanha_detalhe.html",

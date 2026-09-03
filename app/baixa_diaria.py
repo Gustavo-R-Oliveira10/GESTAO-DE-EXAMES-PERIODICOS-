@@ -7,8 +7,12 @@ Fluxo:
 1. A planilha do dia (quem fez o exame) passa pelo mesmo pipeline de matching
    do módulo 1 (ID -> CPF -> nome exato -> fuzzy -> exceção). Categorização
    usa exclusivamente 'local_trabalho' — nunca 'filial'.
-2. Quem bateu tem a base mestre atualizada automaticamente: data_ultimo_aso,
-   status_aso recalculado e status_fila = 'Concluído' (baixa automática).
+2. Cada linha batida é interpretada pelo valor da coluna de data (ver
+   `_situacao_da_linha`): uma data válida = fez o exame naquele dia (baixa
+   aplicada); "Pendente" (ou variantes) = ainda não fez, não recebe baixa;
+   nenhuma coluna de data presente = planilha de presença "pura" (só quem
+   foi), assume que fez no dia do relatório. **Não basta a pessoa aparecer
+   na planilha** — o texto da linha decide, nunca a simples presença.
 3. Quem não bateu vai para a fila de exceções (mesma tabela do módulo 1) —
    nada é gravado na base mestre sem confirmação manual.
 4. "Quem estava agendado e faltou" é calculado comparando os funcionários do
@@ -25,10 +29,49 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from sqlite3 import Connection
 
+import pandas as pd
+
 from logs import registrar_log
 from matching import cruzar_lista_rh
 from planilhas import parse_data
 from rules import status_aso
+
+_TEXTOS_PENDENTE = {"pendente", "pendencia", "pendência", "nao fez", "não fez", "-"}
+
+
+def _situacao_da_linha(linha: dict) -> tuple[str, date | None, str]:
+    """Interpreta a coluna de data da linha do dia. Aceita tanto
+    'data_realizacao' (planilha dedicada de presença) quanto 'data_ultimo_aso'
+    (planilha da empresa, onde a coluna 'Data Aso' vem preenchida com a data
+    real ou o texto 'Pendente' por pessoa).
+
+    Retorna (situacao, data, texto_bruto) — situacao é:
+    - "sem_info": nenhuma das duas colunas veio preenchida — planilha de
+      presença pura (só quem foi), assume que fez no dia do relatório.
+    - "fez": valor parseou como data válida.
+    - "pendente": texto reconhecido como "ainda não fez" (ex: 'Pendente').
+    - "invalido": tinha texto, mas não é data nem um marcador de pendente
+      conhecido — vira inconsistência para revisão manual, não decide sozinho.
+    """
+    valor = linha.get("data_realizacao")
+    if valor is None or (isinstance(valor, float) and pd.isna(valor)) or not str(valor).strip():
+        valor = linha.get("data_ultimo_aso")
+
+    if valor is None or (isinstance(valor, float) and pd.isna(valor)):
+        return "sem_info", None, ""
+
+    texto = str(valor).strip()
+    if not texto or texto.lower() == "nan":
+        return "sem_info", None, ""
+
+    if texto.lower() in _TEXTOS_PENDENTE:
+        return "pendente", None, texto
+
+    dt = parse_data(texto)
+    if dt:
+        return "fez", dt, texto
+
+    return "invalido", None, texto
 
 
 @dataclass
@@ -36,6 +79,12 @@ class ItemFeito:
     funcionario_id: str
     nome: str
     data_realizacao: str
+
+
+@dataclass
+class ItemAindaPendente:
+    funcionario_id: str
+    nome: str
 
 
 @dataclass
@@ -56,6 +105,7 @@ class RelatorioEOD:
     local_trabalho: str | None
     data_relatorio: date
     fizeram: list[ItemFeito] = field(default_factory=list)
+    ainda_pendentes: list[ItemAindaPendente] = field(default_factory=list)
     faltaram: list[ItemFaltou] = field(default_factory=list)
     inconsistencias: list[ItemInconsistencia] = field(default_factory=list)
     total_excecoes: int = 0
@@ -123,13 +173,30 @@ def processar_baixa_diaria(
             continue
         ids_processados_hoje.add(funcionario_id)
 
-        dt_realizacao = parse_data(linha.get("data_realizacao")) or data_relatorio
-        status = status_aso(dt_realizacao, ano_campanha)
-
         row_atual = conn.execute(
             "SELECT nome, data_ultimo_aso FROM funcionarios WHERE id = ?", (funcionario_id,)
         ).fetchone()
         nome_atual = row_atual["nome"] if row_atual else nome_bruto
+
+        situacao, dt_da_linha, texto_bruto = _situacao_da_linha(linha)
+
+        if situacao == "pendente":
+            relatorio.ainda_pendentes.append(ItemAindaPendente(funcionario_id, nome_atual))
+            continue
+
+        if situacao == "invalido":
+            relatorio.inconsistencias.append(
+                ItemInconsistencia(
+                    "Valor de data não reconhecido (nem data válida, nem 'Pendente')",
+                    f"{nome_atual} (ID {funcionario_id}): '{texto_bruto}'",
+                )
+            )
+            continue
+
+        # "sem_info" (planilha de presença pura, sem coluna de data) usa a
+        # data do relatório; "fez" usa a data que veio na própria linha.
+        dt_realizacao = dt_da_linha or data_relatorio
+        status = status_aso(dt_realizacao, ano_campanha)
 
         if row_atual and row_atual["data_ultimo_aso"] == dt_realizacao.isoformat():
             relatorio.inconsistencias.append(
@@ -169,7 +236,8 @@ def processar_baixa_diaria(
         "Baixa diária processada",
         f"local_trabalho={local_trabalho or '(todas)'} data={data_relatorio.isoformat()} "
         f"campanha_id={campanha_id or '-'} fizeram={len(relatorio.fizeram)} "
-        f"faltaram={len(relatorio.faltaram)} inconsistencias={len(relatorio.inconsistencias)}",
+        f"ainda_pendentes={len(relatorio.ainda_pendentes)} faltaram={len(relatorio.faltaram)} "
+        f"inconsistencias={len(relatorio.inconsistencias)}",
     )
 
     return relatorio
