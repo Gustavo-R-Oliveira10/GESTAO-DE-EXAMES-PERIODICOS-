@@ -14,50 +14,38 @@
   <div class="stat-tile">
     <div class="stat-value">{{ campanha.total_funcionarios_filial }}</div>
     <div class="stat-label">Total de Funcionários no Local</div>
-  </div>
-  <div class="stat-tile">
-    <div class="stat-value" style="color:var(--accent-blue)">{{ campanha.total_membros }}</div>
-    <div class="stat-label">Meta da Campanha</div>
+    {% if campanha.nao_precisou %}
+    <a href="#painel-nao-precisou" data-target="painel-nao-precisou" class="stat-tile-note stat-tile-link">
+      {{ campanha.nao_precisou }} não participa{{ 'm' if campanha.nao_precisou != 1 else '' }} da campanha (ASO já em dia)
+    </a>
+    {% else %}
+    <span class="stat-tile-note text-muted">Todos precisam participar</span>
+    {% endif %}
   </div>
   <a class="stat-tile-link" href="#painel-fizeram" data-target="painel-fizeram">
-    <div class="stat-tile" style="position:relative">
+    <div class="stat-tile stat-tile-kpi" style="position:relative">
       <div class="stat-value" style="color:var(--success)">{{ campanha.fizeram }}</div>
-      <div class="stat-label">Exames Realizados</div>
-    </div>
-  </a>
-  <a class="stat-tile-link" href="#painel-nao-precisou" data-target="painel-nao-precisou">
-    <div class="stat-tile" style="position:relative">
-      <div class="stat-value" style="color:var(--accent-blue)">{{ campanha.nao_precisou }}</div>
-      <div class="stat-label">ASO em Dia (Sem Comparecimento)</div>
+      <div class="stat-label">Exames Realizados até o Momento</div>
     </div>
   </a>
   <a class="stat-tile-link" href="#painel-pendentes" data-target="painel-pendentes">
-    <div class="stat-tile" style="position:relative">
+    <div class="stat-tile stat-tile-kpi" style="position:relative">
       <div class="stat-value" style="color:var(--warning)">{{ campanha.pendentes }}</div>
       <div class="stat-label">Exames Pendentes</div>
     </div>
   </a>
-  {% if campanha.fora_do_local %}
-  <a class="stat-tile-link" href="#painel-fora-do-local" data-target="painel-fora-do-local">
-    <div class="stat-tile" style="position:relative">
-      <div class="stat-value" style="color:var(--accent-blue)">{{ campanha.fora_do_local }}</div>
-      <div class="stat-label">De Outro Local (Realizados Aqui)</div>
-    </div>
-  </a>
-  {% endif %}
 </div>
-<p class="text-muted" style="font-size:12.5px; margin:-10px 0 20px 0">
-  "Meta da Campanha" é a foto de quem estava com o ASO vencido no momento em que a lista do RH foi
-  cruzada: {{ campanha.total_membros }} pessoas. Dessas, {{ campanha.nao_precisou }} ficaram com o
-  "ASO em Dia" por fora, sem precisar comparecer — sobram <strong>{{ campanha.precisam_exame }}</strong>
-  que realmente precisam (ou precisaram) realizar o exame nesta campanha
-  ({{ campanha.total_membros }} − {{ campanha.nao_precisou }} = {{ campanha.precisam_exame }}). Desses
-  {{ campanha.precisam_exame }}, {{ campanha.fizeram }} já compareceram e {{ campanha.pendentes }} ainda
-  estão pendentes ({{ campanha.fizeram }} + {{ campanha.pendentes }} = {{ campanha.precisam_exame }}).
-  {% if campanha.fora_do_local %} Além disso, {{ campanha.fora_do_local }} pessoa(s) de outro local
-  também compareceram aqui — não contam pra meta de {{ campanha.local_trabalho }}, mas já foram
-  atualizadas na base mestre normalmente.{% endif %}
+{% if campanha.fora_do_local %}
+<p class="text-muted" style="font-size:12.5px; margin:-10px 0 12px 0">
+  + {{ campanha.fora_do_local }} pessoa{{ 's' if campanha.fora_do_local != 1 else '' }} de outro local também
+  realizaram o exame aqui{% if fora_do_local_por_local %}
+  ({% for local, qtd in fora_do_local_por_local %}{{ local }}: {{ qtd }}{% if not loop.last %}, {% endif %}{% endfor %})
+  {% endif %} — não conta{{ 'm' if campanha.fora_do_local != 1 else '' }} pra meta de {{ campanha.local_trabalho }},
+  mas já {{ 'foram' if campanha.fora_do_local != 1 else 'foi' }} atualizado{{ 's' if campanha.fora_do_local != 1 else '' }}
+  na base mestre normalmente.
+  <a href="#painel-fora-do-local" data-target="painel-fora-do-local" class="stat-tile-link" style="display:inline">Ver detalhes</a>
 </p>
+{% endif %}
 
 <div class="card">
   <div class="progress-meta">

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import io
 import tempfile
+from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
 
@@ -248,6 +249,13 @@ def campanhas():
     )
 
 
+def _resumo_fora_do_local(membros):
+    """Agrupa quem veio de outro local por local_trabalho, pra um mini-texto
+    tipo 'São Paulo: 2, Curitiba: 1' em vez de listar pessoa a pessoa."""
+    contagem = Counter(m["local_trabalho"] or "Sem local" for m in membros)
+    return sorted(contagem.items())
+
+
 @app.route("/campanhas/<int:campanha_id>", methods=["GET"])
 def campanha_detalhe(campanha_id):
     conn = get_connection()
@@ -273,6 +281,7 @@ def campanha_detalhe(campanha_id):
         fizeram_membros=fizeram_membros,
         nao_precisou_membros=nao_precisou_membros,
         fora_do_local_membros=fora_do_local_membros,
+        fora_do_local_por_local=_resumo_fora_do_local(fora_do_local_membros),
         dias=dias,
         convocados=convocados,
         ja_dispensados=ja_dispensados,
@@ -439,6 +448,7 @@ def campanha_processar_dia(campanha_id):
         fizeram_membros=fizeram_membros,
         nao_precisou_membros=nao_precisou_membros,
         fora_do_local_membros=fora_do_local_membros,
+        fora_do_local_por_local=_resumo_fora_do_local(fora_do_local_membros),
         dias=dias,
         convocados=convocados,
         ja_dispensados=ja_dispensados,

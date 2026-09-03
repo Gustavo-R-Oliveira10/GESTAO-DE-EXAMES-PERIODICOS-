@@ -504,6 +504,19 @@ tbody tr:hover td { color: var(--text); }
   color: var(--text-muted);
   margin-top: 5px;
 }
+.stat-tile-note {
+  display: block;
+  font-size: 11.5px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+a.stat-tile-note.stat-tile-link {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+a.stat-tile-note.stat-tile-link:hover { color: var(--primary-darker); text-decoration: underline; }
+.stat-tile-kpi .stat-value { font-size: 34px; }
 
 .empty-state {
   text-align: center;
