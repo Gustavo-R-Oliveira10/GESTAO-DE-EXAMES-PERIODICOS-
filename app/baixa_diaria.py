@@ -198,13 +198,24 @@ def processar_baixa_diaria(
         dt_realizacao = dt_da_linha or data_relatorio
         status = status_aso(dt_realizacao, ano_campanha)
 
-        if row_atual and row_atual["data_ultimo_aso"] == dt_realizacao.isoformat():
+        # Listas de presença de campanha costumam ser cumulativas (a planilha
+        # de um dia mais adiante reenvia o histórico inteiro, não só quem é
+        # novo). Uma linha cuja data bate exatamente com o que já está
+        # gravado não é inconsistência nenhuma — é só a mesma pessoa
+        # confirmada de novo pela mesma fonte. Só vale sinalizar quando a
+        # nova data tenta REGREDIR (é anterior à já registrada), que aí sim
+        # indica dado desatualizado tentando sobrescrever um exame mais
+        # recente — nesse caso a baixa não é aplicada, igual à proteção já
+        # existente em recarregar_base_mestre.
+        if row_atual and row_atual["data_ultimo_aso"] and dt_realizacao.isoformat() < row_atual["data_ultimo_aso"]:
             relatorio.inconsistencias.append(
                 ItemInconsistencia(
-                    "Já estava com baixa dessa mesma data (possível reenvio)",
-                    f"{nome_atual} (ID {funcionario_id})",
+                    "Data da planilha é anterior à já registrada na base (ignorada, sem regressão)",
+                    f"{nome_atual} (ID {funcionario_id}): base tem {row_atual['data_ultimo_aso']}, "
+                    f"planilha trouxe {dt_realizacao.isoformat()}",
                 )
             )
+            continue
 
         conn.execute(
             """

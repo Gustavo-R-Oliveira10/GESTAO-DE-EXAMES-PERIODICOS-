@@ -136,6 +136,41 @@ class TestProcessarBaixaDiaria:
         total = base_populada.execute("SELECT COUNT(*) AS n FROM campanha_atendimentos").fetchone()["n"]
         assert total == 0
 
+    def test_planilha_cumulativa_reenviando_mesma_data_nao_e_inconsistencia(self, base_populada):
+        """Regressão de bug real: listas de presença de campanha são
+        cumulativas (a planilha de um dia mais adiante reenvia o histórico
+        inteiro, não só quem é novo). Reenviar a mesma pessoa com a mesma
+        data já registrada não pode virar inconsistência — é só a mesma
+        confirmação de novo, não um problema."""
+        processar_baixa_diaria(
+            base_populada, [{"id": "1", "nome": "Joao", "data_ultimo_aso": "02/09/2026"}],
+            date(2026, 9, 2), local_trabalho="Brasilia",
+        )
+        rel = processar_baixa_diaria(
+            base_populada, [{"id": "1", "nome": "Joao", "data_ultimo_aso": "02/09/2026"}],
+            date(2026, 9, 4), local_trabalho="Brasilia",
+        )
+        assert len(rel.fizeram) == 1
+        assert len(rel.inconsistencias) == 0
+
+    def test_planilha_com_data_anterior_a_ja_registrada_vira_inconsistencia_sem_regredir(self, base_populada):
+        """Se a planilha do dia trouxer uma data ANTERIOR à já registrada na
+        base, isso é sinal de dado desatualizado tentando sobrescrever um
+        exame mais recente — deve virar inconsistência e a baixa não pode
+        ser aplicada (mesma proteção contra regressão de recarregar_base_mestre)."""
+        processar_baixa_diaria(
+            base_populada, [{"id": "1", "nome": "Joao", "data_ultimo_aso": "04/09/2026"}],
+            date(2026, 9, 4), local_trabalho="Brasilia",
+        )
+        rel = processar_baixa_diaria(
+            base_populada, [{"id": "1", "nome": "Joao", "data_ultimo_aso": "02/09/2026"}],
+            date(2026, 9, 2), local_trabalho="Brasilia",
+        )
+        assert len(rel.fizeram) == 0
+        assert any("anterior à já registrada" in i.motivo for i in rel.inconsistencias)
+        row = base_populada.execute("SELECT data_ultimo_aso FROM funcionarios WHERE id='1'").fetchone()
+        assert row["data_ultimo_aso"] == "2026-09-04"
+
     def test_valor_nao_reconhecido_vira_inconsistencia_nao_pendente(self, base_populada):
         """Um valor que não é data nem 'Pendente' não deve decidir sozinho
         pra nenhum dos dois lados — vira inconsistência para revisão manual."""
